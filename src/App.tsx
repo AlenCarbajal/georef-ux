@@ -26,13 +26,10 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="container header-inner">
-          <div>
+          <div className="header-left">
             <div className="header-brand">
               <Logo />
-              <div>
-                <p className="eyebrow">Dirección de Datos Abiertos</p>
-                <h1>georef-ux</h1>
-              </div>
+              <h1>georef-ux</h1>
             </div>
             <p className="app-subtitle">
               Explorá y normalizá datos geográficos del Estado argentino con la{' '}
@@ -45,29 +42,9 @@ export default function App() {
               </a>
               , sin escribir código.
             </p>
-            <nav className="app-tabs">
-              <button
-                type="button"
-                className={view === 'explorer' ? 'is-active' : ''}
-                onClick={() => setView('explorer')}
-              >
-                Explorador
-              </button>
-              <button
-                type="button"
-                className={view === 'batch' ? 'is-active' : ''}
-                onClick={() => setView('batch')}
-              >
-                Carga en lote (CSV)
-              </button>
-            </nav>
           </div>
           <div className="header-meta">
-            <strong>Datos Argentina</strong>
-            Secretaría de Innovación,
-            <br />
-            Ciencia y Tecnología
-            <br />
+            <strong>Dirección de Datos Abiertos</strong>
             <a
               className="pill-link"
               href="https://www.argentina.gob.ar/georef"
@@ -79,6 +56,25 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      <nav className="view-nav">
+        <div className="container">
+          <button
+            type="button"
+            className={view === 'explorer' ? 'is-active' : ''}
+            onClick={() => setView('explorer')}
+          >
+            Explorador
+          </button>
+          <button
+            type="button"
+            className={view === 'batch' ? 'is-active' : ''}
+            onClick={() => setView('batch')}
+          >
+            Carga en lote (CSV)
+          </button>
+        </div>
+      </nav>
 
       {view === 'explorer' ? (
         <main className="container app-main">
