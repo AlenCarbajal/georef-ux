@@ -4,7 +4,8 @@ import 'leaflet/dist/leaflet.css'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
-import type { Coord, GeorefEntity } from '../api/types'
+import type { Coord, GeorefEntity, GeorefResource } from '../api/types'
+import { fetchBoundaries, supportsBoundaries } from '../api/boundaries'
 
 // Vite no resuelve las imágenes por defecto de Leaflet; las seteamos a mano.
 const defaultIcon = L.icon({
@@ -79,12 +80,15 @@ function popupHtml(e: GeorefEntity): string {
 
 interface Props {
   entities: GeorefEntity[]
+  resource: GeorefResource | null
+  showBoundaries: boolean
 }
 
-export function MapView({ entities }: Props) {
+export function MapView({ entities, resource, showBoundaries }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const layerRef = useRef<L.LayerGroup | null>(null)
+  const boundaryRef = useRef<L.GeoJSON | null>(null)
 
   // Inicialización del mapa (una vez).
   useEffect(() => {
@@ -141,6 +145,51 @@ export function MapView({ entities }: Props) {
       map.fitBounds(L.latLngBounds(points), { padding: [30, 30], maxZoom: 13 })
     }
   }, [entities])
+
+  // Límites (polígonos) del IGN para los recursos soportados.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    if (boundaryRef.current) {
+      boundaryRef.current.remove()
+      boundaryRef.current = null
+    }
+    if (!showBoundaries || !resource || !supportsBoundaries(resource)) return
+
+    const ids = entities
+      .map((e) => e.id)
+      .filter((id): id is string => typeof id === 'string' && id !== '')
+      .slice(0, 200)
+    if (ids.length === 0) return
+
+    let cancelled = false
+    fetchBoundaries(resource, ids)
+      .then((fc) => {
+        if (cancelled || !fc || !mapRef.current) return
+        const layer = L.geoJSON(fc, {
+          style: {
+            color: '#6d3cc0',
+            weight: 2,
+            fillColor: '#8453d6',
+            fillOpacity: 0.12,
+          },
+        }).addTo(map)
+        boundaryRef.current = layer
+        try {
+          map.fitBounds(layer.getBounds(), { padding: [30, 30] })
+        } catch {
+          /* sin bounds válidos */
+        }
+      })
+      .catch(() => {
+        /* si el IGN falla, el mapa sigue mostrando los centroides */
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [entities, resource, showBoundaries])
 
   return <div ref={containerRef} className="map-view" />
 }

@@ -4,6 +4,7 @@ import { ResultsPanel } from './components/ResultsPanel'
 import { MapView } from './components/MapView'
 import { BatchGeocoder } from './components/BatchGeocoder'
 import { useGeorefQuery } from './hooks/useGeorefQuery'
+import { supportsBoundaries } from './api/boundaries'
 import './styles.css'
 
 type View = 'explorer' | 'batch'
@@ -11,6 +12,8 @@ type View = 'explorer' | 'batch'
 export default function App() {
   const query = useGeorefQuery()
   const [view, setView] = useState<View>('explorer')
+  const [showBoundaries, setShowBoundaries] = useState(false)
+  const canDrawBoundaries = supportsBoundaries(query.resource)
 
   return (
     <div className="app">
@@ -95,7 +98,28 @@ export default function App() {
                 </p>
               </div>
             </div>
-            <MapView entities={query.entities} />
+            <label className="map-toggle">
+              <input
+                type="checkbox"
+                checked={showBoundaries}
+                disabled={!canDrawBoundaries}
+                onChange={(e) => setShowBoundaries(e.target.checked)}
+              />
+              <span>
+                Mostrar límites (polígonos)
+                {query.resource && !canDrawBoundaries && (
+                  <span className="map-toggle__note">
+                    {' '}
+                    — no disponibles para este recurso; se muestran los puntos
+                  </span>
+                )}
+              </span>
+            </label>
+            <MapView
+              entities={query.entities}
+              resource={query.resource}
+              showBoundaries={showBoundaries}
+            />
           </section>
 
           <section className="panel panel-results">
