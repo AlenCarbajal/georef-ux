@@ -103,6 +103,24 @@ const aplanar: FieldDef = {
 // Bloque avanzado estándar para los recursos de listado.
 const LIST_ADVANCED: FieldDef[] = [id, inicio, exacto, orden, campos, aplanar]
 
+// Recursos cuya base completa publica Georef para descarga (todo el país).
+// gobiernos-locales y los censales no tienen dump (404); direcciones/ubicacion
+// son operaciones, no entidades descargables.
+export const DOWNLOADABLE: GeorefResource[] = [
+  'provincias',
+  'departamentos',
+  'municipios',
+  'localidades',
+  'localidades-censales',
+  'asentamientos',
+  'calles',
+]
+
+// Georef publica estos formatos (no publica SHP).
+export const DOWNLOAD_FORMATS = ['csv', 'json', 'geojson', 'ndjson'] as const
+
+export const DUMP_BASE_URL = 'https://apis.datos.gob.ar/georef/api'
+
 // Campo específico de radios censales.
 const fraccionCensal: FieldDef = {
   name: 'fraccion_censal',

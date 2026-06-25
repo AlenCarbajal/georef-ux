@@ -1,7 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { buildUrl } from '../api/georef'
-import { CATEGORIES, FIELDS_BY_RESOURCE } from '../api/fields'
+import {
+  CATEGORIES,
+  DOWNLOADABLE,
+  DOWNLOAD_FORMATS,
+  DUMP_BASE_URL,
+  FIELDS_BY_RESOURCE,
+} from '../api/fields'
 import type { FieldDef } from '../api/fields'
+import { fetchCampos } from '../api/campos'
 import { buildSnippets } from '../api/snippets'
 import type { GeorefResource, QueryParams } from '../api/types'
 
@@ -10,7 +17,7 @@ interface Props {
   onSubmit: (resource: GeorefResource, params: QueryParams) => void
 }
 
-/** Renderiza un campo según su `control`, con su texto de ayuda. */
+/** Renderiza un campo según su `control`, con su texto de ayuda debajo. */
 function Field({
   field,
   value,
@@ -31,10 +38,12 @@ function Field({
           checked={value === 'true'}
           onChange={(e) => onChange(e.target.checked ? 'true' : '')}
         />
-        <label className="check-label" htmlFor={field.name}>
-          {field.label}
-          <span className="field-help">{field.help}</span>
-        </label>
+        <div className="check-text">
+          <label className="check-label" htmlFor={field.name}>
+            {field.label}
+          </label>
+          <p className="field-help">{field.help}</p>
+        </div>
       </div>
     )
   }
@@ -68,6 +77,115 @@ function Field({
         />
       )}
       <p className="field-help">{field.help}</p>
+    </div>
+  )
+}
+
+/** Selección de campos como checkboxes: descubre los disponibles por recurso. */
+function CamposField({
+  resource,
+  value,
+  onChange,
+}: {
+  resource: GeorefResource
+  value: string
+  onChange: (value: string) => void
+}) {
+  const [fields, setFields] = useState<string[] | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setFields(null)
+    fetchCampos(resource)
+      .then((f) => !cancelled && setFields(f))
+      .catch(() => !cancelled && setFields([]))
+    return () => {
+      cancelled = true
+    }
+  }, [resource])
+
+  const selected = new Set(value ? value.split(',').filter(Boolean) : [])
+  function toggle(f: string) {
+    const next = new Set(selected)
+    if (next.has(f)) next.delete(f)
+    else next.add(f)
+    onChange([...next].join(','))
+  }
+
+  if (fields === null) {
+    return (
+      <div className="form-group">
+        <label className="field-label">Campos a incluir</label>
+        <p className="field-help">Cargando campos disponibles…</p>
+      </div>
+    )
+  }
+
+  // Recursos sin lista (direcciones/ubicación): texto libre como respaldo.
+  if (fields.length === 0) {
+    return (
+      <div className="form-group">
+        <label className="field-label" htmlFor="campos">
+          Campos a incluir
+        </label>
+        <input
+          id="campos"
+          className="form-control"
+          placeholder="Ej. id,nombre"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <p className="field-help">Lista de campos separados por coma.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="form-group">
+      <label className="field-label">Campos a incluir</label>
+      <p className="field-help">
+        Marcá los campos que querés en la respuesta. Si no marcás ninguno,
+        vienen los predeterminados.
+      </p>
+      <div className="campos-grid">
+        {fields.map((f) => (
+          <label key={f} className="campos-check">
+            <input
+              type="checkbox"
+              checked={selected.has(f)}
+              onChange={() => toggle(f)}
+            />
+            <span>{f}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** Botones de descarga de la base completa del recurso (si Georef la publica). */
+function DownloadSection({ resource }: { resource: GeorefResource }) {
+  if (!DOWNLOADABLE.includes(resource)) return null
+  return (
+    <div className="downloads">
+      <div className="downloads__title">Descargar base completa</div>
+      <p className="field-help">
+        Archivo oficial de <strong>{FIELDS_BY_RESOURCE[resource].label}</strong>{' '}
+        (todo el país), publicado en datos.gob.ar. Georef no publica SHP.
+      </p>
+      <div className="downloads__btns">
+        {DOWNLOAD_FORMATS.map((fmt) => (
+          <a
+            key={fmt}
+            className="btn btn-ghost btn-sm"
+            href={`${DUMP_BASE_URL}/${resource}.${fmt}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {fmt.toUpperCase()}
+          </a>
+        ))}
+      </div>
     </div>
   )
 }
@@ -164,6 +282,27 @@ export function RequestBuilder({ loading, onSubmit }: Props) {
     onSubmit(resource, values)
   }
 
+  function renderField(f: FieldDef) {
+    if (f.name === 'campos') {
+      return (
+        <CamposField
+          key="campos"
+          resource={resource}
+          value={values.campos ?? ''}
+          onChange={(v) => setField('campos', v)}
+        />
+      )
+    }
+    return (
+      <Field
+        key={f.name}
+        field={f}
+        value={values[f.name] ?? ''}
+        onChange={(v) => setField(f.name, v)}
+      />
+    )
+  }
+
   return (
     <form className="request-builder" onSubmit={handleSubmit}>
       <div className="category-tabs" role="tablist">
@@ -186,9 +325,10 @@ export function RequestBuilder({ loading, onSubmit }: Props) {
         ))}
       </div>
 
-      <p className="builder-intro">
-        <strong>{activeCategory.label}.</strong> {activeCategory.description}
-      </p>
+      <div className="builder-intro">
+        <span className="builder-intro__title">{activeCategory.label}</span>
+        <p className="builder-intro__desc">{activeCategory.description}</p>
+      </div>
 
       {activeCategory.resources.length > 1 && (
         <div className="form-group">
@@ -211,14 +351,7 @@ export function RequestBuilder({ loading, onSubmit }: Props) {
         </div>
       )}
 
-      {form.base.map((f) => (
-        <Field
-          key={f.name}
-          field={f}
-          value={values[f.name] ?? ''}
-          onChange={(v) => setField(f.name, v)}
-        />
-      ))}
+      {form.base.map(renderField)}
 
       {form.advanced.length > 0 && (
         <div className="advanced">
@@ -232,16 +365,7 @@ export function RequestBuilder({ loading, onSubmit }: Props) {
             avanzadas
           </button>
           {showAdvanced && (
-            <div className="advanced-body">
-              {form.advanced.map((f) => (
-                <Field
-                  key={f.name}
-                  field={f}
-                  value={values[f.name] ?? ''}
-                  onChange={(v) => setField(f.name, v)}
-                />
-              ))}
-            </div>
+            <div className="advanced-body">{form.advanced.map(renderField)}</div>
           )}
         </div>
       )}
@@ -268,6 +392,7 @@ export function RequestBuilder({ loading, onSubmit }: Props) {
         {loading ? 'Consultando…' : 'Consultar →'}
       </button>
 
+      <DownloadSection resource={resource} />
       <CodeSnippets resource={resource} params={values} />
     </form>
   )
