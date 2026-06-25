@@ -10,7 +10,6 @@ export const RESOURCES = [
   'localidades-censales',
   'asentamientos',
   'calles',
-  'cuadras',
   'direcciones',
   'ubicacion',
 ] as const
@@ -43,6 +42,10 @@ export interface GeorefEntity {
   departamento?: NamedRef
   municipio?: NamedRef
   localidad_censal?: NamedRef
+  gobierno_local?: NamedRef
+  // resultado de `ubicacion` (georref inversa): lat/lon en el nivel superior
+  lat?: number
+  lon?: number
   // resultado de `direcciones`
   ubicacion?: Coord
   altura?: { valor?: number; unidad?: string }

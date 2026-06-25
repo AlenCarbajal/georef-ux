@@ -96,6 +96,112 @@ body {
   border-radius: 3px;
 }
 
+/* Texto de ayuda bajo cada campo. */
+.field-help {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: #6b6b6b;
+}
+
+.field-check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+.field-check input {
+  margin: 0;
+  width: auto;
+}
+
+/* Sección de opciones avanzadas (colapsable). */
+.advanced {
+  margin: 0.25rem 0 0.75rem;
+  border-top: 1px dashed #dcdcdc;
+  padding-top: 0.5rem;
+}
+
+.advanced-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #2b7bb9;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.advanced-toggle:hover {
+  text-decoration: underline;
+}
+
+.advanced-body {
+  margin-top: 0.6rem;
+  padding-left: 0.6rem;
+  border-left: 3px solid #eef2f4;
+}
+
+.builder-intro {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: #555;
+  background: #eef6fb;
+  border-left: 3px solid #37bbed;
+  padding: 0.5rem 0.7rem;
+  border-radius: 3px;
+}
+
+/* Snippets de código (cURL / Python / R / JS). */
+.snippets {
+  margin-top: 1rem;
+  border-top: 1px solid #eee;
+  padding-top: 0.75rem;
+}
+
+.snippets-body {
+  margin-top: 0.6rem;
+}
+
+.snippets-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.4rem;
+}
+
+.snippet-tab {
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.snippet-tab.is-active {
+  background: #37bbed;
+  border-color: #37bbed;
+  color: #fff;
+  font-weight: 600;
+}
+
+.snippet-code {
+  background: #2d2d2d;
+  color: #f5f5f5;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  padding: 0.7rem 0.8rem;
+  border-radius: 4px;
+  overflow: auto;
+  max-height: 220px;
+  margin: 0 0 0.5rem;
+  white-space: pre;
+}
+
 .map-view {
   height: 420px;
   width: 100%;
