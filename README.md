@@ -1,76 +1,60 @@
 # georef-ux
 
-UX sencilla para explorar la [API Georef V2](https://www.argentina.gob.ar/georef) del Estado argentino:
-armar requests y ver resultados, visualizar en mapa, y cargar una base (CSV) para georreferenciarla o
-normalizar direcciones en lote.
+Una página para usar **Georef** —el servicio del Estado argentino que ordena y
+ubica datos geográficos— sin tener que escribir código ni leer documentación de API.
 
-Sitio estático (sin backend) — la API permite llamadas directas desde el navegador (CORS abierto).
+La idea es simple: si querés averiguar en qué provincia cae una coordenada,
+normalizar un listado de direcciones escritas a mano, o ver los departamentos de
+una provincia en un mapa, entrás, lo armás con un formulario y lo ves al instante.
 
-## Stack
+## Qué se puede hacer
 
-- React 19 + Vite + TypeScript
-- Estética **Datos Abiertos** (paleta violeta/lila), CSS propio; tipografías
-  Encode Sans + Roboto Mono
-- Leaflet + basemap IGN Argenmap; límites (polígonos) vía geoservicio WFS del IGN
-- PapaParse (CSV)
+**Explorar.** Elegís qué querés consultar (provincias, departamentos, municipios,
+localidades, calles, direcciones…), completás un formulario con ayuda en cada
+campo, y ves el resultado en una tabla o como JSON. Abajo te mostramos la consulta
+ya escrita en cURL, Python, R o JavaScript, lista para copiar y pegar en tu propio
+código.
 
-## Uso
+**Verlo en el mapa.** Todo lo que tiene coordenadas aparece en un mapa de
+Argentina. Si tocás un punto, te muestra qué es y a qué provincia, departamento o
+municipio pertenece. Para provincias, departamentos y municipios podés además
+dibujar el **contorno** (los límites), no solo el punto.
+
+**Procesar una base entera.** Subís un CSV y elegís qué hacer con él: normalizar
+una columna de direcciones, georreferenciar coordenadas, o emprolijar nombres de
+unidades territoriales. Le decís qué columna es cada cosa y la página procesa todas
+las filas y te devuelve el mismo archivo con columnas nuevas (`georef_*`) que podés
+descargar.
+
+También podés bajarte las **bases completas** publicadas (todo el país) en CSV,
+JSON, GeoJSON o NDJSON, directo desde el botón de descarga.
+
+Todo pasa en el navegador: no hay servidor propio, la página le habla directo a la
+API pública de Georef.
+
+## Sobre los límites en el mapa
+
+La API de Georef devuelve el centro de cada lugar, pero no su contorno. Para dibujar
+los límites usamos el geoservicio de mapas del **IGN** (Instituto Geográfico
+Nacional). Hoy andan **provincias, departamentos y municipios**. Los radios y
+fracciones censales no tienen contorno disponible en ningún servicio abierto, así
+que para esos se muestra el punto. El detalle completo de qué dato sale de dónde
+está en [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md).
+
+## Correrlo
 
 ```bash
 npm install
-npm run dev      # servidor de desarrollo (http://localhost:5173)
-npm run build    # build de producción en dist/
-npm run preview  # previsualiza el build
+npm run dev       # arranca en http://localhost:5173
+npm run build     # deja el sitio listo en dist/
 ```
 
-## Estructura
+Es una app de React que se publica como sitio estático (no necesita base de datos
+ni backend). El despliegue a GitHub Pages está automatizado: cada cambio en `main`
+republica el sitio.
 
-- `src/api/` — cliente tipado de Georef (`georef.ts`, `types.ts`), metadatos de
-  recursos/campos por categoría (`fields.ts`), generación de snippets de código
-  (`snippets.ts`) y límites del IGN (`boundaries.ts`). Única fuente de verdad de
-  red; incluye `fetchGeoref` (GET) y `fetchGeorefBatch` (POST batch).
-- `src/batch/geocode.ts` — parseo de CSV (PapaParse), troceado en lotes de 1000,
-  mapeo fila → consulta, extracción de campos y exportación del CSV enriquecido.
-- `src/components/` — `RequestBuilder` (solapas por categoría + formulario guiado +
-  URL + snippets), `ResultsPanel` (tabla / JSON), `MapView` (Leaflet + Argenmap +
-  límites) y `BatchGeocoder` (carga en lote).
-- `src/hooks/` — `useGeorefQuery` (consultas del explorador) y `useBatchGeocode`
-  (estado y progreso de la carga en lote).
+## Más documentación
 
-## Funciones
-
-La app tiene dos pestañas:
-
-- **Explorador:** armar requests a cualquier recurso de la API, ver resultados en
-  tabla / JSON y visualizarlos en el mapa.
-- **Carga en lote (CSV):** subir un CSV con una columna de direcciones para
-  georreferenciarlas y normalizarlas en lote (recurso `direcciones`, vía POST
-  batch). Devuelve el mismo CSV con columnas `georef_*` (lat, lon, nomenclatura,
-  provincia, departamento, localidad censal, calle, altura) y permite descargarlo.
-
-El explorador agrupa los recursos en solapas (**Territorio**, **Calles y
-direcciones**, **Datos censales**, **Georreferenciación inversa**), cada campo
-tiene ayuda contextual y la consulta se puede copiar como código (cURL, Python con
-`pygeorefar`, R con `georefar`, JavaScript).
-
-## Mapa y límites
-
-El mapa grafica los resultados con coordenadas (marcadores con popup de detalle) y,
-con el toggle **"Mostrar límites"**, dibuja los **polígonos** de la entidad para los
-recursos soportados. La API Georef sólo devuelve el centroide, así que la geometría
-de los límites se trae del **geoservicio WFS del IGN**: hoy se cubren **provincias,
-departamentos y municipios**. Radios y fracciones censales no tienen polígono en
-fuentes públicas accesibles desde el navegador (ver detalle abajo).
-
-## Documentación
-
-- [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md) — fuentes de datos, geoservicio de
-  límites del IGN, dumps GeoJSON de Georef y la limitación de los censales.
-- [`docs/DESIGN_BRIEF.md`](docs/DESIGN_BRIEF.md) — brief de diseño de la UI.
-
-## Estado
-
-**Fase 1 (MVP) y Fase 2 — implementadas**, con rediseño Datos Abiertos y límites en
-el mapa. Próximos pasos posibles: descarga en otros formatos (GeoJSON), columnas
-`georef_*` configurables, manejo de múltiples coincidencias por dirección, y
-límites de radios/fracciones censales a partir de la cartografía INDEC.
+- [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md) — de dónde sale cada dato y por qué
+  algunos límites no están disponibles.
+- [`docs/DESIGN_BRIEF.md`](docs/DESIGN_BRIEF.md) — la guía de diseño visual.
