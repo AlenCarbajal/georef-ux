@@ -50,34 +50,49 @@ export function ResultsPanel({ loading, error, response, entities }: Props) {
   if (loading) return <p className="results-status">Consultando la API…</p>
   if (error)
     return (
-      <div className="alert alert-danger" role="alert">
+      <div className="alert-error" role="alert">
         {error}
       </div>
     )
-  if (!response) return <p className="results-status text-muted">Realizá una consulta para ver resultados.</p>
+  if (!response)
+    return (
+      <p className="results-status">
+        Realizá una consulta para ver resultados.
+      </p>
+    )
   if (entities.length === 0)
-    return <p className="results-status text-muted">Sin resultados.</p>
+    return <p className="results-status">Sin resultados.</p>
 
   return (
     <div className="results-panel">
-      <div className="results-meta">
-        <span>
-          {response.cantidad ?? entities.length} de {response.total ?? entities.length} resultado(s)
+      <div className="results-bar">
+        <span className="results-count">
+          Mostrando <b>{response.cantidad ?? entities.length}</b> de{' '}
+          <b>{response.total ?? entities.length}</b> resultados
         </span>
-        <button
-          type="button"
-          className="btn btn-sm btn-default"
-          onClick={() => setShowJson((v) => !v)}
-        >
-          {showJson ? 'Ver tabla' : 'Ver JSON'}
-        </button>
+        <div className="seg" role="tablist">
+          <button
+            type="button"
+            className={!showJson ? 'is-active' : ''}
+            onClick={() => setShowJson(false)}
+          >
+            Tabla
+          </button>
+          <button
+            type="button"
+            className={showJson ? 'is-active' : ''}
+            onClick={() => setShowJson(true)}
+          >
+            JSON
+          </button>
+        </div>
       </div>
 
       {showJson ? (
         <pre className="results-json">{JSON.stringify(response, null, 2)}</pre>
       ) : (
-        <div className="table-responsive">
-          <table className="table table-striped table-condensed">
+        <div className="table-wrap">
+          <table>
             <thead>
               <tr>
                 {columns.map((c) => (
@@ -89,7 +104,9 @@ export function ResultsPanel({ loading, error, response, entities }: Props) {
               {entities.map((e, i) => (
                 <tr key={(e.id as string) ?? i}>
                   {columns.map((c) => (
-                    <td key={c}>{cell(e[c])}</td>
+                    <td key={c} className={cellClass(c)}>
+                      {cell(e[c])}
+                    </td>
                   ))}
                 </tr>
               ))}
@@ -99,4 +116,12 @@ export function ResultsPanel({ loading, error, response, entities }: Props) {
       )}
     </div>
   )
+}
+
+/** Clase monoespaciada para columnas de id y coordenadas. */
+function cellClass(column: string): string | undefined {
+  if (column === 'id') return 'col-id'
+  if (['centroide', 'ubicacion', 'lat', 'lon'].includes(column))
+    return 'col-coord'
+  return undefined
 }

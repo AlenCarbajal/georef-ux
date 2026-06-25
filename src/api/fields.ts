@@ -240,6 +240,7 @@ export const FIELDS_BY_RESOURCE: Record<GeorefResource, ResourceForm> = {
 export interface ResourceCategory {
   key: string
   label: string
+  icon: string
   description: string
   resources: GeorefResource[]
 }
@@ -248,6 +249,7 @@ export const CATEGORIES: ResourceCategory[] = [
   {
     key: 'territorio',
     label: 'Territorio',
+    icon: '◎',
     description:
       'Unidades territoriales del país: provincias, departamentos, municipios, gobiernos locales, localidades y asentamientos.',
     resources: [
@@ -262,6 +264,7 @@ export const CATEGORIES: ResourceCategory[] = [
   {
     key: 'direcciones',
     label: 'Calles y direcciones',
+    icon: '⌖',
     description:
       'Buscá vías de circulación o escribí una dirección con altura para normalizarla y ubicarla.',
     resources: ['calles', 'direcciones'],
@@ -269,6 +272,7 @@ export const CATEGORIES: ResourceCategory[] = [
   {
     key: 'censo',
     label: 'Datos censales',
+    icon: '▦',
     description:
       'Unidades estadísticas del INDEC: localidades, fracciones y radios censales.',
     resources: [
@@ -279,7 +283,8 @@ export const CATEGORIES: ResourceCategory[] = [
   },
   {
     key: 'inversa',
-    label: 'Georreferenciación inversa',
+    label: 'Georref. inversa',
+    icon: '⊕',
     description:
       'A partir de una coordenada (lat/lon) obtené las unidades territoriales que la contienen.',
     resources: ['ubicacion'],

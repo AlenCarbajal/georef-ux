@@ -24,23 +24,26 @@ function Field({
 
   if (control === 'checkbox') {
     return (
-      <div className="form-group field">
-        <label className="field-check">
-          <input
-            type="checkbox"
-            checked={value === 'true'}
-            onChange={(e) => onChange(e.target.checked ? 'true' : '')}
-          />
-          <span>{field.label}</span>
+      <div className="check-row">
+        <input
+          id={field.name}
+          type="checkbox"
+          checked={value === 'true'}
+          onChange={(e) => onChange(e.target.checked ? 'true' : '')}
+        />
+        <label className="check-label" htmlFor={field.name}>
+          {field.label}
+          <span className="field-help">{field.help}</span>
         </label>
-        <p className="field-help">{field.help}</p>
       </div>
     )
   }
 
   return (
-    <div className="form-group field">
-      <label htmlFor={field.name}>{field.label}</label>
+    <div className="form-group">
+      <label className="field-label" htmlFor={field.name}>
+        {field.label}
+      </label>
       {control === 'select' ? (
         <select
           id={field.name}
@@ -105,11 +108,12 @@ function CodeSnippets({
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
       >
-        {open ? '▾' : '▸'} Código para reutilizar esta consulta
+        <span className="chev">{open ? '▾' : '▸'}</span> Código para reutilizar
+        esta consulta
       </button>
 
       {open && (
-        <div className="snippets-body">
+        <>
           <div className="snippets-tabs" role="tablist">
             {snippets.map((s, i) => (
               <button
@@ -125,14 +129,10 @@ function CodeSnippets({
             ))}
           </div>
           <pre className="snippet-code">{current.code}</pre>
-          <button
-            type="button"
-            className="btn btn-sm btn-default"
-            onClick={copy}
-          >
+          <button type="button" className="btn btn-ghost btn-sm" onClick={copy}>
             {copied ? '¡Copiado!' : 'Copiar código'}
           </button>
-        </div>
+        </>
       )}
     </div>
   )
@@ -178,16 +178,23 @@ export function RequestBuilder({ loading, onSubmit }: Props) {
             }`}
             onClick={() => changeResource(cat.resources[0])}
           >
+            <span className="tab-ico" aria-hidden="true">
+              {cat.icon}
+            </span>
             {cat.label}
           </button>
         ))}
       </div>
 
-      <p className="builder-intro">{activeCategory.description}</p>
+      <p className="builder-intro">
+        <strong>{activeCategory.label}.</strong> {activeCategory.description}
+      </p>
 
-      {activeCategory.resources.length > 1 ? (
+      {activeCategory.resources.length > 1 && (
         <div className="form-group">
-          <label htmlFor="resource">¿Qué querés consultar?</label>
+          <label className="field-label" htmlFor="resource">
+            ¿Qué querés consultar?
+          </label>
           <select
             id="resource"
             className="form-control"
@@ -202,8 +209,6 @@ export function RequestBuilder({ loading, onSubmit }: Props) {
           </select>
           <p className="field-help">{form.description}</p>
         </div>
-      ) : (
-        <p className="field-help resource-single">{form.description}</p>
       )}
 
       {form.base.map((f) => (
@@ -223,7 +228,8 @@ export function RequestBuilder({ loading, onSubmit }: Props) {
             onClick={() => setShowAdvanced((s) => !s)}
             aria-expanded={showAdvanced}
           >
-            {showAdvanced ? '▾' : '▸'} Opciones avanzadas
+            <span className="chev">{showAdvanced ? '▾' : '▸'}</span> Opciones
+            avanzadas
           </button>
           {showAdvanced && (
             <div className="advanced-body">
@@ -240,20 +246,26 @@ export function RequestBuilder({ loading, onSubmit }: Props) {
         </div>
       )}
 
-      <div className="generated-url">
-        <span className="generated-url__label">URL</span>
-        <code title={url}>{url}</code>
-        <button
-          type="button"
-          className="btn btn-sm btn-default"
-          onClick={() => navigator.clipboard?.writeText(url)}
-        >
-          Copiar
-        </button>
+      <div className="url-block">
+        <div className="url-label">URL que se va a consultar</div>
+        <div className="url-row">
+          <code title={url}>{url}</code>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => navigator.clipboard?.writeText(url)}
+          >
+            Copiar
+          </button>
+        </div>
       </div>
 
-      <button type="submit" className="btn btn-primary" disabled={loading}>
-        {loading ? 'Consultando…' : 'Consultar'}
+      <button
+        type="submit"
+        className="btn btn-primary btn-block"
+        disabled={loading}
+      >
+        {loading ? 'Consultando…' : 'Consultar →'}
       </button>
 
       <CodeSnippets resource={resource} params={values} />

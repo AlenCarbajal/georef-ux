@@ -61,7 +61,13 @@ export function MapView({ entities }: Props) {
     layerRef.current = L.layerGroup().addTo(map)
     mapRef.current = map
 
+    // Reencuadrar el mapa cuando el contenedor cambia de tamaño (el panel se
+    // estira al alto de la columna y puede crecer al abrir opciones avanzadas).
+    const ro = new ResizeObserver(() => map.invalidateSize())
+    ro.observe(containerRef.current)
+
     return () => {
+      ro.disconnect()
       map.remove()
       mapRef.current = null
       layerRef.current = null
