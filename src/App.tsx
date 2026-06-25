@@ -5,15 +5,15 @@ import { MapView } from './components/MapView'
 import { BatchGeocoder } from './components/BatchGeocoder'
 import { useGeorefQuery } from './hooks/useGeorefQuery'
 import { supportsBoundaries } from './api/boundaries'
-import georefLogo from './assets/georef-logo.png'
+import georefMark from './assets/georef-mark.png'
 import sicytLogo from './assets/secretaria-innovacion-blanco.png'
 import './styles.css'
 
 type View = 'explorer' | 'batch'
 
-/** Logo oficial de Georef (pin con tres puntos + wordmark), de Datos Abiertos. */
+/** Marca oficial de Georef: el pin con tres puntos (sin el wordmark). */
 function Logo() {
-  return <img className="brand-logo" src={georefLogo} alt="Georef" />
+  return <img className="brand-logo" src={georefMark} alt="Georef" />
 }
 
 export default function App() {
