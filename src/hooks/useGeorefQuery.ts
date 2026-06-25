@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   GeorefApiError,
   extractEntities,
@@ -25,12 +25,17 @@ const initialState: QueryState = {
 /** Hook que envuelve fetchGeoref con estado loading/error/data. */
 export function useGeorefQuery() {
   const [state, setState] = useState<QueryState>(initialState)
+  // Identifica la última consulta lanzada: descartamos respuestas que llegan
+  // fuera de orden para que una request lenta no pise a una más nueva.
+  const lastReqId = useRef(0)
 
   const run = useCallback(
     async (resource: GeorefResource, params: QueryParams) => {
+      const reqId = ++lastReqId.current
       setState((s) => ({ ...s, loading: true, error: null }))
       try {
         const response = await fetchGeoref(resource, params)
+        if (reqId !== lastReqId.current) return
         setState({
           loading: false,
           error: null,
@@ -39,6 +44,7 @@ export function useGeorefQuery() {
           resource,
         })
       } catch (err) {
+        if (reqId !== lastReqId.current) return
         const message =
           err instanceof GeorefApiError
             ? err.message

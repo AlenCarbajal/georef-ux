@@ -28,10 +28,13 @@ const PREFERRED = [
   'provincia',
   'departamento',
   'municipio',
+  'gobierno_local',
   'localidad_censal',
   'categoria',
   'centroide',
   'ubicacion',
+  'lat',
+  'lon',
 ]
 
 export function ResultsPanel({ loading, error, response, entities }: Props) {

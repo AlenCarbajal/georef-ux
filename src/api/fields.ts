@@ -42,11 +42,6 @@ export const FIELDS_BY_RESOURCE: Record<GeorefResource, FieldDef[]> = {
     { name: 'nombre', label: 'Nombre de calle', placeholder: 'Ej. San Martín' },
     { name: 'max', label: 'Máx. resultados', placeholder: '10', type: 'number' },
   ],
-  cuadras: [
-    PROVINCIA,
-    DEPARTAMENTO,
-    { name: 'max', label: 'Máx. resultados', placeholder: '10', type: 'number' },
-  ],
   direcciones: [
     {
       name: 'direccion',

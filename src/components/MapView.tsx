@@ -21,7 +21,14 @@ const defaultIcon = L.icon({
 const ARGENTINA_CENTER: L.LatLngExpression = [-38.4, -63.6]
 
 function coordOf(e: GeorefEntity): Coord | null {
-  const c = e.ubicacion ?? e.centroide
+  // `ubicacion` (georref inversa) trae lat/lon en el nivel superior;
+  // direcciones bajo `ubicacion`; el resto bajo `centroide`.
+  const c =
+    e.ubicacion ??
+    e.centroide ??
+    (typeof e.lat === 'number' && typeof e.lon === 'number'
+      ? { lat: e.lat, lon: e.lon }
+      : undefined)
   if (c && typeof c.lat === 'number' && typeof c.lon === 'number') return c
   return null
 }
