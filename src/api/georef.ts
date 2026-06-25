@@ -8,6 +8,9 @@ import type {
   QueryParams,
 } from './types'
 
+/** Máximo de consultas por request batch que acepta Georef. */
+export const BATCH_MAX = 1000
+
 export const BASE_URL = 'https://apis.datos.gob.ar/georef/api'
 
 /** Error con el mensaje legible que devuelve Georef en `errores[]`. */
@@ -81,4 +84,56 @@ export async function fetchGeoref(
     throw new GeorefApiError('Respuesta vacía o no válida de la API.')
   }
   return body
+}
+
+/**
+ * Ejecuta un request batch (POST) de hasta BATCH_MAX consultas en un solo
+ * cuerpo `{ <recurso>: [...] }`. Devuelve los `resultados` en el mismo orden
+ * que las consultas enviadas. No hace chunking: ver `geocodeRows` para eso.
+ */
+export async function fetchGeorefBatch(
+  resource: GeorefResource,
+  queries: Record<string, unknown>[],
+): Promise<GeorefResponse[]> {
+  if (queries.length > BATCH_MAX) {
+    throw new GeorefApiError(
+      `El batch admite hasta ${BATCH_MAX} consultas (recibidas ${queries.length}).`,
+    )
+  }
+
+  let res: Response
+  try {
+    res = await fetch(`${BASE_URL}/${resource}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ [resource]: queries }),
+    })
+  } catch (err) {
+    throw new GeorefApiError(
+      `No se pudo conectar con la API: ${(err as Error).message}`,
+    )
+  }
+
+  let body: { resultados?: GeorefResponse[]; errores?: GeorefResponse['errores'] } | null = null
+  try {
+    body = await res.json()
+  } catch {
+    // se maneja por status abajo
+  }
+
+  if (!res.ok) {
+    const msg = body?.errores?.map((e) => e.mensaje).filter(Boolean).join(' · ')
+    throw new GeorefApiError(
+      msg || `La API respondió ${res.status} ${res.statusText}`,
+      res.status,
+    )
+  }
+
+  if (!body?.resultados) {
+    throw new GeorefApiError('Respuesta batch sin `resultados`.')
+  }
+  return body.resultados
 }

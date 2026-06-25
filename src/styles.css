@@ -125,6 +125,53 @@ body {
   color: #777;
 }
 
+/* Tabs de navegación */
+.app-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.app-tabs button {
+  border: none;
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  padding: 0.4rem 0.9rem;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.app-tabs button.is-active {
+  background: #fff;
+  color: #2a7ab0;
+  font-weight: bold;
+}
+
+/* Vista de una sola columna (carga en lote) */
+.app-main-single {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
+/* Carga en lote */
+.batch-config {
+  max-width: 480px;
+}
+
+.batch-progress {
+  margin: 1rem 0;
+}
+
+.batch-result__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
 @media (max-width: 768px) {
   .app-main {
     grid-template-columns: 1fr;
