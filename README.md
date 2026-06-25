@@ -25,16 +25,28 @@ npm run preview  # previsualiza el build
 ## Estructura
 
 - `src/api/` — cliente tipado de Georef (`georef.ts`, `types.ts`) y metadatos de
-  parámetros por recurso (`fields.ts`). Única fuente de verdad de red.
+  parámetros por recurso (`fields.ts`). Única fuente de verdad de red; incluye
+  `fetchGeoref` (GET) y `fetchGeorefBatch` (POST batch).
+- `src/batch/geocode.ts` — parseo de CSV (PapaParse), troceado en lotes de 1000,
+  mapeo fila → consulta, extracción de campos y exportación del CSV enriquecido.
 - `src/components/` — `RequestBuilder` (formulario + URL generada), `ResultsPanel`
-  (tabla / JSON) y `MapView` (Leaflet + Argenmap).
-- `src/hooks/useGeorefQuery.ts` — estado loading/error/data de las consultas.
+  (tabla / JSON), `MapView` (Leaflet + Argenmap) y `BatchGeocoder` (carga en lote).
+- `src/hooks/` — `useGeorefQuery` (consultas del explorador) y `useBatchGeocode`
+  (estado y progreso de la carga en lote).
+
+## Funciones
+
+La app tiene dos pestañas:
+
+- **Explorador:** armar requests a cualquier recurso de la API, ver resultados en
+  tabla / JSON y visualizarlos en el mapa.
+- **Carga en lote (CSV):** subir un CSV con una columna de direcciones para
+  georreferenciarlas y normalizarlas en lote (recurso `direcciones`, vía POST
+  batch). Devuelve el mismo CSV con columnas `georef_*` (lat, lon, nomenclatura,
+  provincia, departamento, localidad censal, calle, altura) y permite descargarlo.
 
 ## Estado
 
-**Fase 1 (MVP) — implementada:** explorador de requests con resultados (tabla / JSON)
-y visualización en mapa para los recursos de la API (provincias, departamentos,
-municipios, localidades, calles, direcciones, ubicación, etc.).
-
-**Fase 2 — pendiente:** carga de CSV para georreferenciar en lote y normalización
-de direcciones en lote (vía POST batch de Georef), reutilizando el cliente de `src/api/`.
+**Fase 1 (MVP) y Fase 2 — implementadas.** Próximos pasos posibles: descarga en
+otros formatos (GeoJSON), columnas `georef_*` configurables, y manejo de
+múltiples coincidencias por dirección.
