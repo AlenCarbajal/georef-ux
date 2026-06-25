@@ -3,7 +3,7 @@
 // en el worker es necesario: el XHR síncrono de pyodide-http no funciona para
 // POST cross-origin en el hilo principal, y además evita congelar la UI.
 
-const WHEEL = 'pygeorefar-0.1.0-py3-none-any.whl'
+const WHEEL = 'pygeorefar-0.1.1-py3-none-any.whl'
 
 /** Estados de inicialización, para mostrar feedback en la UI. */
 export type PyStatus = 'loading-runtime' | 'installing-packages' | 'ready'
