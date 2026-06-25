@@ -1,60 +1,64 @@
 # georef-ux
 
-Una página para usar **Georef** —el servicio del Estado argentino que ordena y
-ubica datos geográficos— sin tener que escribir código ni leer documentación de API.
+Aplicación web para usar la **API Georef** (Servicio de Normalización de Datos
+Geográficos del Estado argentino) desde el navegador, sin escribir código. Combina
+un explorador de la API, una vista de mapa y un procesador de archivos CSV en lote.
 
-La idea es simple: si querés averiguar en qué provincia cae una coordenada,
-normalizar un listado de direcciones escritas a mano, o ver los departamentos de
-una provincia en un mapa, entrás, lo armás con un formulario y lo ves al instante.
+🔗 **https://alencarbajal.github.io/georef-ux/**
 
-## Qué se puede hacer
+## Funcionalidades
 
-**Explorar.** Elegís qué querés consultar (provincias, departamentos, municipios,
-localidades, calles, direcciones…), completás un formulario con ayuda en cada
-campo, y ves el resultado en una tabla o como JSON. Abajo te mostramos la consulta
-ya escrita en cURL, Python, R o JavaScript, lista para copiar y pegar en tu propio
-código.
+### Explorador de la API
 
-**Verlo en el mapa.** Todo lo que tiene coordenadas aparece en un mapa de
-Argentina. Si tocás un punto, te muestra qué es y a qué provincia, departamento o
-municipio pertenece. Para provincias, departamentos y municipios podés además
-dibujar el **contorno** (los límites), no solo el punto.
+- Constructor de consultas por recurso (provincias, departamentos, municipios,
+  gobiernos locales, localidades, asentamientos, calles, direcciones y unidades
+  censales), con los parámetros válidos de cada uno y ayuda por campo.
+- Parámetros separados en básicos y avanzados. La selección de campos (`campos`)
+  es un multiselect cuyas opciones se descubren desde la propia API.
+- Resultados en tabla o JSON, con la URL de la consulta generada en vivo.
+- Snippets equivalentes en cURL, Python (`pygeorefar`), R (`georefar`) y
+  JavaScript, listos para copiar.
+- Descarga de las bases completas publicadas, en CSV, JSON, GeoJSON o NDJSON.
 
-**Procesar una base entera.** Subís un CSV y elegís qué hacer con él: normalizar
-una columna de direcciones, georreferenciar coordenadas, o emprolijar nombres de
-unidades territoriales. Le decís qué columna es cada cosa y la página procesa todas
-las filas y te devuelve el mismo archivo con columnas nuevas (`georef_*`) que podés
-descargar.
+### Mapa
 
-También podés bajarte las **bases completas** publicadas (todo el país) en CSV,
-JSON, GeoJSON o NDJSON, directo desde el botón de descarga.
+- Los resultados con coordenadas se renderizan como marcadores, con popup de
+  detalle (unidades territoriales, id, coordenadas).
+- Georreferenciación inversa al hacer click sobre el mapa.
+- Dibujo de los límites (polígonos) de provincias, departamentos y municipios,
+  obtenidos del geoservicio WFS del IGN.
 
-Todo pasa en el navegador: no hay servidor propio, la página le habla directo a la
-API pública de Georef.
+### Carga en lote (CSV)
 
-## Sobre los límites en el mapa
+- Tres operaciones: normalizar direcciones, georreferenciación inversa
+  (lat/lon → unidades) y normalizar nombres de unidades territoriales.
+- Mapeo columna → campo configurable: cada campo de la consulta se asigna a una
+  columna del CSV o a un valor fijo.
+- Procesamiento por lotes contra el endpoint POST de la API. La salida es el CSV
+  original más columnas `georef_*`, descargable.
 
-La API de Georef devuelve el centro de cada lugar, pero no su contorno. Para dibujar
-los límites usamos el geoservicio de mapas del **IGN** (Instituto Geográfico
-Nacional). Hoy andan **provincias, departamentos y municipios**. Los radios y
-fracciones censales no tienen contorno disponible en ningún servicio abierto, así
-que para esos se muestra el punto. El detalle completo de qué dato sale de dónde
-está en [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md).
+## Cómo funciona
 
-## Correrlo
+Sitio estático, sin backend: el navegador consulta directamente la API pública de
+Georef (CORS habilitado). Como esa API devuelve el centroide de cada entidad pero
+no su geometría, los límites del mapa se traen del WFS del IGN. Hecho con React y
+Vite.
+
+## Desarrollo
 
 ```bash
 npm install
-npm run dev       # arranca en http://localhost:5173
-npm run build     # deja el sitio listo en dist/
+npm run dev     # http://localhost:5173
+npm run build   # genera dist/
 ```
 
-Es una app de React que se publica como sitio estático (no necesita base de datos
-ni backend). El despliegue a GitHub Pages está automatizado: cada cambio en `main`
-republica el sitio.
+## Despliegue
 
-## Más documentación
+Automatizado en GitHub Pages: cada push a `main` dispara el workflow
+`.github/workflows/deploy.yml`, que compila y publica `dist/`.
 
-- [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md) — de dónde sale cada dato y por qué
-  algunos límites no están disponibles.
-- [`docs/DESIGN_BRIEF.md`](docs/DESIGN_BRIEF.md) — la guía de diseño visual.
+## Documentación
+
+- [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md) — fuentes de datos, geoservicio de
+  límites del IGN y por qué radios/fracciones censales no tienen polígono.
+- [`docs/DESIGN_BRIEF.md`](docs/DESIGN_BRIEF.md) — guía de diseño de la interfaz.
