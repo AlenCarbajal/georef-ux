@@ -954,3 +954,25 @@ td.col-coord {
     min-height: 320px;
   }
 }
+
+/* ============ CAMPOS DE SALIDA (carga en lote) ============ */
+.output-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 0.75rem;
+  margin: 0.4rem 0 0.6rem;
+}
+.output-field {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.output-field input {
+  flex: none;
+}
+.batch-pystatus {
+  margin: 0.6rem 0;
+  font-size: 0.85rem;
+}
