@@ -5,31 +5,14 @@ import { MapView } from './components/MapView'
 import { BatchGeocoder } from './components/BatchGeocoder'
 import { useGeorefQuery } from './hooks/useGeorefQuery'
 import { supportsBoundaries } from './api/boundaries'
+import georefLogo from './assets/georef-logo.png'
 import './styles.css'
 
 type View = 'explorer' | 'batch'
 
-/** Logo oficial de Georef: pin con tres puntos (reproducido como SVG, en blanco). */
+/** Logo oficial de Georef (pin con tres puntos + wordmark), de Datos Abiertos. */
 function Logo() {
-  return (
-    <svg
-      className="brand-logo"
-      viewBox="0 0 64 64"
-      xmlns="http://www.w3.org/2000/svg"
-      role="img"
-      aria-label="Georef"
-    >
-      <mask id="georefPin">
-        <rect width="64" height="64" fill="#000" />
-        <circle cx="32" cy="25" r="15" fill="#fff" />
-        <path d="M19.5 35 L32 56 L44.5 35 Z" fill="#fff" />
-        <circle cx="25.2" cy="25" r="2.7" fill="#000" />
-        <circle cx="32" cy="25" r="2.7" fill="#000" />
-        <circle cx="38.8" cy="25" r="2.7" fill="#000" />
-      </mask>
-      <rect width="64" height="64" fill="#ffffff" mask="url(#georefPin)" />
-    </svg>
-  )
+  return <img className="brand-logo" src={georefLogo} alt="Georef" />
 }
 
 export default function App() {
