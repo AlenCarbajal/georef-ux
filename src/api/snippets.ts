@@ -21,7 +21,10 @@ const PY_METHOD: Record<GeorefResource, string> = {
   'fracciones-censales': 'get_fracciones_censales',
   'radios-censales': 'get_radios_censales',
   asentamientos: 'get_asentamientos',
+  aglomerados: 'get_aglomerados',
   calles: 'get_calles',
+  'establecimientos-educativos': 'get_establecimientos_educativos',
+  'instituciones-universitarias': 'get_instituciones_universitarias',
   direcciones: 'get_direcciones',
   ubicacion: 'get_georef_inversa',
 }
@@ -37,7 +40,10 @@ const R_FN: Record<GeorefResource, string> = {
   'fracciones-censales': 'get_fracciones_censales',
   'radios-censales': 'get_radios_censales',
   asentamientos: 'get_asentamientos',
+  aglomerados: 'get_aglomerados',
   calles: 'get_calles',
+  'establecimientos-educativos': 'get_establecimientos_educativos',
+  'instituciones-universitarias': 'get_instituciones_universitarias',
   direcciones: 'normalizar_direccion',
   ubicacion: 'get_ubicacion',
 }

@@ -11,7 +11,10 @@ export const RESOURCES = [
   'fracciones-censales',
   'radios-censales',
   'asentamientos',
+  'aglomerados',
   'calles',
+  'establecimientos-educativos',
+  'instituciones-universitarias',
   'direcciones',
   'ubicacion',
 ] as const
