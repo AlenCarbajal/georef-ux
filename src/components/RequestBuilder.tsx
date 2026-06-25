@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { buildUrl } from '../api/georef'
-import { FIELDS_BY_RESOURCE } from '../api/fields'
+import { FIELDS_BY_RESOURCE, RESOURCE_GROUPS } from '../api/fields'
 import type { FieldDef } from '../api/fields'
-import { RESOURCES } from '../api/types'
+import { buildSnippets } from '../api/snippets'
 import type { GeorefResource, QueryParams } from '../api/types'
 
 interface Props {
@@ -69,6 +69,75 @@ function Field({
   )
 }
 
+/** Bloque colapsable con el código equivalente en varios lenguajes. */
+function CodeSnippets({
+  resource,
+  params,
+}: {
+  resource: GeorefResource
+  params: QueryParams
+}) {
+  const snippets = useMemo(
+    () => buildSnippets(resource, params),
+    [resource, params],
+  )
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(0)
+  const [copied, setCopied] = useState(false)
+
+  const current = snippets[active]
+
+  function selectTab(i: number) {
+    setActive(i)
+    setCopied(false)
+  }
+
+  function copy() {
+    navigator.clipboard?.writeText(current.code)
+    setCopied(true)
+  }
+
+  return (
+    <div className="snippets">
+      <button
+        type="button"
+        className="advanced-toggle"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        {open ? '▾' : '▸'} Código para reutilizar esta consulta
+      </button>
+
+      {open && (
+        <div className="snippets-body">
+          <div className="snippets-tabs" role="tablist">
+            {snippets.map((s, i) => (
+              <button
+                key={s.label}
+                type="button"
+                role="tab"
+                aria-selected={i === active}
+                className={`snippet-tab${i === active ? ' is-active' : ''}`}
+                onClick={() => selectTab(i)}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+          <pre className="snippet-code">{current.code}</pre>
+          <button
+            type="button"
+            className="btn btn-sm btn-default"
+            onClick={copy}
+          >
+            {copied ? '¡Copiado!' : 'Copiar código'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function RequestBuilder({ loading, onSubmit }: Props) {
   const [resource, setResource] = useState<GeorefResource>('provincias')
   const [values, setValues] = useState<QueryParams>({})
@@ -94,18 +163,27 @@ export function RequestBuilder({ loading, onSubmit }: Props) {
 
   return (
     <form className="request-builder" onSubmit={handleSubmit}>
+      <p className="builder-intro">
+        Elegí qué querés consultar y completá los datos. No necesitás saber
+        programar: armamos la consulta por vos.
+      </p>
+
       <div className="form-group">
-        <label htmlFor="resource">Recurso</label>
+        <label htmlFor="resource">¿Qué querés consultar?</label>
         <select
           id="resource"
           className="form-control"
           value={resource}
           onChange={(e) => changeResource(e.target.value as GeorefResource)}
         >
-          {RESOURCES.map((r) => (
-            <option key={r} value={r}>
-              {FIELDS_BY_RESOURCE[r].label}
-            </option>
+          {RESOURCE_GROUPS.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.resources.map((r) => (
+                <option key={r} value={r}>
+                  {FIELDS_BY_RESOURCE[r].label}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <p className="field-help">{form.description}</p>
@@ -160,6 +238,8 @@ export function RequestBuilder({ loading, onSubmit }: Props) {
       <button type="submit" className="btn btn-primary" disabled={loading}>
         {loading ? 'Consultando…' : 'Consultar'}
       </button>
+
+      <CodeSnippets resource={resource} params={values} />
     </form>
   )
 }

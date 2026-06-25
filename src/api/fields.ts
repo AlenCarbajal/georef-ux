@@ -103,6 +103,35 @@ const aplanar: FieldDef = {
 // Bloque avanzado estándar para los recursos de listado.
 const LIST_ADVANCED: FieldDef[] = [id, inicio, exacto, orden, campos, aplanar]
 
+// Agrupación temática para el selector, en lenguaje cotidiano.
+export interface ResourceGroup {
+  label: string
+  resources: GeorefResource[]
+}
+
+export const RESOURCE_GROUPS: ResourceGroup[] = [
+  {
+    label: 'Lugares y territorio',
+    resources: [
+      'provincias',
+      'departamentos',
+      'municipios',
+      'gobiernos-locales',
+      'localidades',
+      'localidades-censales',
+      'asentamientos',
+    ],
+  },
+  {
+    label: 'Calles y direcciones',
+    resources: ['calles', 'direcciones'],
+  },
+  {
+    label: 'Desde una coordenada (lat/lon)',
+    resources: ['ubicacion'],
+  },
+]
+
 // --- Formularios por recurso ------------------------------------------------
 
 export const FIELDS_BY_RESOURCE: Record<GeorefResource, ResourceForm> = {
