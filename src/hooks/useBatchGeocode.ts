@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { GeorefApiError } from '../api/georef'
 import {
-  parseCsv,
+  parseFile,
   runBatch,
   type CsvData,
   type GeocodeProgress,
@@ -38,7 +38,7 @@ export function useBatchGeocode() {
     dataRef.current = null
     setState({ ...initial, status: 'parsing', fileName: file.name })
     try {
-      const data = await parseCsv(file)
+      const data = await parseFile(file)
       dataRef.current = data
       setState({ ...initial, status: 'ready', fileName: file.name, data })
     } catch (err) {
@@ -46,7 +46,7 @@ export function useBatchGeocode() {
         ...initial,
         status: 'error',
         fileName: file.name,
-        error: `No se pudo leer el CSV: ${(err as Error).message}`,
+        error: `No se pudo leer el archivo: ${(err as Error).message}`,
       })
     }
   }, [])
