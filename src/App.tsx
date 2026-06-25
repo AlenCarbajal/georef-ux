@@ -9,34 +9,25 @@ import './styles.css'
 
 type View = 'explorer' | 'batch'
 
-/** Logo: pin de geolocalización en tile violeta (identidad Datos Abiertos). */
+/** Logo oficial de Georef: pin con tres puntos (reproducido como SVG, en blanco). */
 function Logo() {
   return (
     <svg
       className="brand-logo"
-      viewBox="0 0 48 48"
+      viewBox="0 0 64 64"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="georef-ux"
+      aria-label="Georef"
     >
-      <defs>
-        <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#ffffff" stopOpacity="0.95" />
-          <stop offset="1" stopColor="#e7dbf7" stopOpacity="0.85" />
-        </linearGradient>
-      </defs>
-      <rect
-        width="48"
-        height="48"
-        rx="11"
-        fill="rgba(255,255,255,0.14)"
-        stroke="rgba(255,255,255,0.5)"
-      />
-      <path
-        d="M24 10.5c-5.2 0-9.4 4.1-9.4 9.2 0 6.7 9.4 17.8 9.4 17.8s9.4-11.1 9.4-17.8c0-5.1-4.2-9.2-9.4-9.2z"
-        fill="url(#logoGrad)"
-      />
-      <circle cx="24" cy="19.6" r="3.7" fill="#5b2ea3" />
+      <mask id="georefPin">
+        <rect width="64" height="64" fill="#000" />
+        <circle cx="32" cy="25" r="15" fill="#fff" />
+        <path d="M19.5 35 L32 56 L44.5 35 Z" fill="#fff" />
+        <circle cx="25.2" cy="25" r="2.7" fill="#000" />
+        <circle cx="32" cy="25" r="2.7" fill="#000" />
+        <circle cx="38.8" cy="25" r="2.7" fill="#000" />
+      </mask>
+      <rect width="64" height="64" fill="#ffffff" mask="url(#georefPin)" />
     </svg>
   )
 }
