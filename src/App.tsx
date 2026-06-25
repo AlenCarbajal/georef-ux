@@ -44,7 +44,12 @@ export default function App() {
             </p>
           </div>
           <div className="header-meta">
-            <strong>Dirección de Datos Abiertos</strong>
+            <div>
+              <strong>Dirección de Datos Abiertos</strong>
+              <span className="meta-sub">
+                Secretaría de Innovación, Ciencia y Tecnología
+              </span>
+            </div>
             <a
               className="pill-link"
               href="https://www.argentina.gob.ar/georef"
@@ -59,20 +64,22 @@ export default function App() {
 
       <nav className="view-nav">
         <div className="container">
-          <button
-            type="button"
-            className={view === 'explorer' ? 'is-active' : ''}
-            onClick={() => setView('explorer')}
-          >
-            Explorador
-          </button>
-          <button
-            type="button"
-            className={view === 'batch' ? 'is-active' : ''}
-            onClick={() => setView('batch')}
-          >
-            Carga en lote (CSV)
-          </button>
+          <div className="view-switch">
+            <button
+              type="button"
+              className={view === 'explorer' ? 'is-active' : ''}
+              onClick={() => setView('explorer')}
+            >
+              Explorador
+            </button>
+            <button
+              type="button"
+              className={view === 'batch' ? 'is-active' : ''}
+              onClick={() => setView('batch')}
+            >
+              Carga en lote (CSV)
+            </button>
+          </div>
         </div>
       </nav>
 
