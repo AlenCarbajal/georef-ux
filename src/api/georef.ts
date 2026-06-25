@@ -11,9 +11,9 @@ import type {
 /** Máximo de consultas por request batch que acepta Georef. */
 export const BATCH_MAX = 1000
 
-// Fijamos la versión v2.0: sin versión la API sirve "la última", lo que
-// rompería silenciosamente la app ante un futuro v3 con cambios de esquema.
-export const BASE_URL = 'https://apis.datos.gob.ar/georef/api/v2.0'
+// Fijamos la versión vigente (v2.1). Sin versión la API sirve "la última" y
+// la v2.0 quedó deprecada (deja de responder), por eso conviene pinearla.
+export const BASE_URL = 'https://apis.datos.gob.ar/georef/api/v2.1'
 
 /** Error con el mensaje legible que devuelve Georef en `errores[]`. */
 export class GeorefApiError extends Error {

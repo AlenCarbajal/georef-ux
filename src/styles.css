@@ -96,6 +96,55 @@ body {
   border-radius: 3px;
 }
 
+/* Texto de ayuda bajo cada campo. */
+.field-help {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: #6b6b6b;
+}
+
+.field-check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+.field-check input {
+  margin: 0;
+  width: auto;
+}
+
+/* Sección de opciones avanzadas (colapsable). */
+.advanced {
+  margin: 0.25rem 0 0.75rem;
+  border-top: 1px dashed #dcdcdc;
+  padding-top: 0.5rem;
+}
+
+.advanced-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #2b7bb9;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.advanced-toggle:hover {
+  text-decoration: underline;
+}
+
+.advanced-body {
+  margin-top: 0.6rem;
+  padding-left: 0.6rem;
+  border-left: 3px solid #eef2f4;
+}
+
 .map-view {
   height: 420px;
   width: 100%;

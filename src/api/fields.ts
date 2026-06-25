@@ -1,64 +1,213 @@
-// Metadatos de parámetros por recurso, usados por el RequestBuilder para
-// renderizar el formulario adecuado a cada endpoint.
+// Metadatos de cada recurso para el RequestBuilder: nombre amigable,
+// descripción, campos base vs. avanzados y texto de ayuda por campo.
+// Pensado para que un usuario sin conocer la API entienda qué hace cada cosa.
 
 import type { GeorefResource } from './types'
+
+export type FieldControl = 'text' | 'number' | 'checkbox' | 'select'
 
 export interface FieldDef {
   name: string
   label: string
+  help: string
   placeholder?: string
-  type?: 'text' | 'number'
+  control?: FieldControl // por defecto 'text'
+  options?: { value: string; label: string }[] // para control 'select'
 }
 
-// Parámetros comunes a la mayoría de los recursos de listado.
-const COMMON: FieldDef[] = [
-  { name: 'nombre', label: 'Nombre', placeholder: 'Ej. Córdoba' },
-  { name: 'max', label: 'Máx. resultados', placeholder: '10', type: 'number' },
-  { name: 'inicio', label: 'Inicio (offset)', placeholder: '0', type: 'number' },
-]
+export interface ResourceForm {
+  label: string // nombre amigable en el selector
+  description: string // qué devuelve el recurso
+  base: FieldDef[] // se muestran siempre
+  advanced: FieldDef[] // detrás de "Opciones avanzadas"
+}
 
-const PROVINCIA: FieldDef = {
+// --- Campos reutilizables ---------------------------------------------------
+
+const nombre: FieldDef = {
+  name: 'nombre',
+  label: 'Nombre',
+  placeholder: 'Ej. Córdoba',
+  help: 'Texto a buscar. Por defecto la búsqueda es parcial e ignora mayúsculas y acentos.',
+}
+const provincia: FieldDef = {
   name: 'provincia',
   label: 'Provincia',
-  placeholder: 'Nombre o ID',
+  placeholder: 'Nombre o ID (ej. 14)',
+  help: 'Limita los resultados a una provincia. Acepta el nombre o el ID de 2 dígitos.',
 }
-const DEPARTAMENTO: FieldDef = {
+const departamento: FieldDef = {
   name: 'departamento',
   label: 'Departamento',
   placeholder: 'Nombre o ID',
+  help: 'Limita los resultados a un departamento, partido o comuna. Nombre o ID.',
+}
+const localidadCensal: FieldDef = {
+  name: 'localidad_censal',
+  label: 'Localidad censal',
+  placeholder: 'Nombre o ID',
+  help: 'Limita a una localidad censal (unidad definida por el INDEC). Nombre o ID.',
+}
+const max: FieldDef = {
+  name: 'max',
+  label: 'Máx. resultados',
+  placeholder: '10',
+  control: 'number',
+  help: 'Cuántos resultados traer como máximo. Si lo dejás vacío, la API usa 10.',
 }
 
-export const FIELDS_BY_RESOURCE: Record<GeorefResource, FieldDef[]> = {
-  provincias: [...COMMON],
-  departamentos: [PROVINCIA, ...COMMON],
-  municipios: [PROVINCIA, ...COMMON],
-  'gobiernos-locales': [PROVINCIA, ...COMMON],
-  localidades: [PROVINCIA, DEPARTAMENTO, ...COMMON],
-  'localidades-censales': [PROVINCIA, DEPARTAMENTO, ...COMMON],
-  asentamientos: [PROVINCIA, DEPARTAMENTO, ...COMMON],
-  calles: [
-    PROVINCIA,
-    DEPARTAMENTO,
-    { name: 'nombre', label: 'Nombre de calle', placeholder: 'Ej. San Martín' },
-    { name: 'max', label: 'Máx. resultados', placeholder: '10', type: 'number' },
+// Avanzados comunes a los recursos de listado.
+const id: FieldDef = {
+  name: 'id',
+  label: 'ID exacto',
+  placeholder: 'Ej. 14 (uno o varios con coma)',
+  help: 'Devuelve la entidad con ese ID. Podés pasar varios IDs separados por coma.',
+}
+const inicio: FieldDef = {
+  name: 'inicio',
+  label: 'Inicio (paginado)',
+  placeholder: '0',
+  control: 'number',
+  help: 'Saltea los primeros N resultados. Combinado con "Máx." sirve para paginar.',
+}
+const exacto: FieldDef = {
+  name: 'exacto',
+  label: 'Coincidencia exacta del nombre',
+  control: 'checkbox',
+  help: 'Si lo activás, el nombre debe coincidir exactamente (sin búsqueda parcial).',
+}
+const orden: FieldDef = {
+  name: 'orden',
+  label: 'Ordenar por',
+  control: 'select',
+  options: [
+    { value: '', label: '(por defecto)' },
+    { value: 'id', label: 'ID' },
+    { value: 'nombre', label: 'Nombre' },
   ],
-  direcciones: [
-    {
-      name: 'direccion',
-      label: 'Dirección',
-      placeholder: 'Ej. Av. Rivadavia 1234',
-    },
-    PROVINCIA,
-    DEPARTAMENTO,
-    {
-      name: 'localidad_censal',
-      label: 'Localidad censal',
-      placeholder: 'Nombre o ID',
-    },
-    { name: 'max', label: 'Máx. resultados', placeholder: '10', type: 'number' },
-  ],
-  ubicacion: [
-    { name: 'lat', label: 'Latitud', placeholder: '-34.6', type: 'number' },
-    { name: 'lon', label: 'Longitud', placeholder: '-58.4', type: 'number' },
-  ],
+  help: 'Campo por el cual ordenar los resultados.',
+}
+const campos: FieldDef = {
+  name: 'campos',
+  label: 'Campos a incluir',
+  placeholder: 'Ej. id,nombre,centroide',
+  help: 'Lista de campos separados por coma. Para subcampos usá punto (ej. provincia.id).',
+}
+const aplanar: FieldDef = {
+  name: 'aplanar',
+  label: 'Aplanar respuesta',
+  control: 'checkbox',
+  help: 'Devuelve los objetos anidados como campos planos (ej. provincia_nombre).',
+}
+
+// Bloque avanzado estándar para los recursos de listado.
+const LIST_ADVANCED: FieldDef[] = [id, inicio, exacto, orden, campos, aplanar]
+
+// --- Formularios por recurso ------------------------------------------------
+
+export const FIELDS_BY_RESOURCE: Record<GeorefResource, ResourceForm> = {
+  provincias: {
+    label: 'Provincias',
+    description: 'Las 24 provincias del país (incluye CABA).',
+    base: [nombre, max],
+    advanced: LIST_ADVANCED,
+  },
+  departamentos: {
+    label: 'Departamentos',
+    description: 'Departamentos, partidos (Buenos Aires) y comunas (CABA).',
+    base: [nombre, provincia, max],
+    advanced: LIST_ADVANCED,
+  },
+  municipios: {
+    label: 'Municipios',
+    description: 'Municipios del país.',
+    base: [nombre, provincia, max],
+    advanced: [departamento, ...LIST_ADVANCED],
+  },
+  'gobiernos-locales': {
+    label: 'Gobiernos locales',
+    description: 'Municipios, comunas y comisiones de fomento.',
+    base: [nombre, provincia, max],
+    advanced: [departamento, ...LIST_ADVANCED],
+  },
+  localidades: {
+    label: 'Localidades',
+    description: 'Localidades: entidades de población con nombre.',
+    base: [nombre, provincia, max],
+    advanced: [departamento, localidadCensal, ...LIST_ADVANCED],
+  },
+  'localidades-censales': {
+    label: 'Localidades censales',
+    description: 'Localidades censales definidas por el INDEC.',
+    base: [nombre, provincia, max],
+    advanced: [departamento, ...LIST_ADVANCED],
+  },
+  asentamientos: {
+    label: 'Asentamientos',
+    description: 'Asentamientos y parajes (base BAHRA).',
+    base: [nombre, provincia, max],
+    advanced: [departamento, localidadCensal, ...LIST_ADVANCED],
+  },
+  calles: {
+    label: 'Calles',
+    description: 'Vías de circulación: calles, avenidas y rutas.',
+    base: [
+      { ...nombre, label: 'Nombre de calle', placeholder: 'Ej. San Martín' },
+      provincia,
+      max,
+    ],
+    advanced: [departamento, localidadCensal, ...LIST_ADVANCED],
+  },
+  direcciones: {
+    label: 'Direcciones (normalizar)',
+    description:
+      'Normaliza una dirección escrita y, cuando puede, la georreferencia (devuelve lat/lon).',
+    base: [
+      {
+        name: 'direccion',
+        label: 'Dirección',
+        placeholder: 'Ej. Av. Rivadavia 1234',
+        help: 'Calle y altura a normalizar. La altura (el número) es obligatoria.',
+      },
+      provincia,
+    ],
+    advanced: [
+      departamento,
+      localidadCensal,
+      {
+        name: 'localidad',
+        label: 'Localidad',
+        placeholder: 'Nombre o ID',
+        help: 'Limita la búsqueda a una localidad. Nombre o ID.',
+      },
+      {
+        ...max,
+        help: 'Máximo de direcciones candidatas. Este recurso admite hasta 10.',
+      },
+      campos,
+      aplanar,
+    ],
+  },
+  ubicacion: {
+    label: 'Ubicación (georref. inversa)',
+    description:
+      'A partir de una coordenada, devuelve las unidades territoriales que la contienen (provincia, departamento, etc.).',
+    base: [
+      {
+        name: 'lat',
+        label: 'Latitud',
+        placeholder: '-34.6',
+        control: 'number',
+        help: 'Latitud en grados decimales (WGS84). En Argentina es negativa.',
+      },
+      {
+        name: 'lon',
+        label: 'Longitud',
+        placeholder: '-58.4',
+        control: 'number',
+        help: 'Longitud en grados decimales (WGS84). En Argentina es negativa.',
+      },
+    ],
+    advanced: [campos, aplanar],
+  },
 }
