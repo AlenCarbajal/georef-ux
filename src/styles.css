@@ -819,7 +819,22 @@ td.col-coord {
 
 /* ============ CARGA EN LOTE (CSV) ============ */
 .batch-config {
-  max-width: 520px;
+  max-width: 560px;
+}
+.mapping-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--ink);
+  margin: 1rem 0 0.6rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+.mapping-fixed {
+  margin-top: 0.4rem;
+}
+.req {
+  color: var(--violet-600);
+  font-weight: 700;
 }
 .batch-progress {
   margin: 1rem 0;

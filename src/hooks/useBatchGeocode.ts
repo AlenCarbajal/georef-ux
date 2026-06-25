@@ -1,12 +1,12 @@
 import { useCallback, useRef, useState } from 'react'
 import { GeorefApiError } from '../api/georef'
 import {
-  geocodeRows,
   parseCsv,
-  type ColumnMapping,
+  runBatch,
   type CsvData,
   type GeocodeProgress,
   type GeocodeResult,
+  type RunConfig,
 } from '../batch/geocode'
 
 export type BatchStatus = 'idle' | 'parsing' | 'ready' | 'running' | 'done' | 'error'
@@ -51,7 +51,7 @@ export function useBatchGeocode() {
     }
   }, [])
 
-  const run = useCallback(async (mapping: ColumnMapping) => {
+  const run = useCallback(async (config: RunConfig) => {
     const data = dataRef.current
     if (!data) return
     setState((s) => ({
@@ -62,7 +62,7 @@ export function useBatchGeocode() {
       progress: { done: 0, total: data.rows.length },
     }))
     try {
-      const result = await geocodeRows(data, mapping, (progress) =>
+      const result = await runBatch(data, config, (progress) =>
         setState((s) => ({ ...s, progress })),
       )
       setState((s) => ({ ...s, status: 'done', result }))
