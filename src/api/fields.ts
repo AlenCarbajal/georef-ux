@@ -103,34 +103,34 @@ const aplanar: FieldDef = {
 // Bloque avanzado estándar para los recursos de listado.
 const LIST_ADVANCED: FieldDef[] = [id, inicio, exacto, orden, campos, aplanar]
 
-// Agrupación temática para el selector, en lenguaje cotidiano.
-export interface ResourceGroup {
-  label: string
-  resources: GeorefResource[]
+// Recursos cuya base completa publica Georef para descarga (todo el país).
+// gobiernos-locales y los censales no tienen dump (404); direcciones/ubicacion
+// son operaciones, no entidades descargables.
+export const DOWNLOADABLE: GeorefResource[] = [
+  'provincias',
+  'departamentos',
+  'municipios',
+  'localidades',
+  'localidades-censales',
+  'asentamientos',
+  'calles',
+]
+
+// Georef publica estos formatos (no publica SHP).
+export const DOWNLOAD_FORMATS = ['csv', 'json', 'geojson', 'ndjson'] as const
+
+export const DUMP_BASE_URL = 'https://apis.datos.gob.ar/georef/api'
+
+// Campo específico de radios censales.
+const fraccionCensal: FieldDef = {
+  name: 'fraccion_censal',
+  label: 'Fracción censal',
+  placeholder: 'ID de fracción',
+  help: 'Limita los resultados a una fracción censal, por su ID.',
 }
 
-export const RESOURCE_GROUPS: ResourceGroup[] = [
-  {
-    label: 'Lugares y territorio',
-    resources: [
-      'provincias',
-      'departamentos',
-      'municipios',
-      'gobiernos-locales',
-      'localidades',
-      'localidades-censales',
-      'asentamientos',
-    ],
-  },
-  {
-    label: 'Calles y direcciones',
-    resources: ['calles', 'direcciones'],
-  },
-  {
-    label: 'Desde una coordenada (lat/lon)',
-    resources: ['ubicacion'],
-  },
-]
+// Los recursos censales se identifican por territorio/ID (no tienen nombre).
+const CENSUS_ADVANCED: FieldDef[] = [departamento, id, inicio, campos, aplanar]
 
 // --- Formularios por recurso ------------------------------------------------
 
@@ -170,6 +170,18 @@ export const FIELDS_BY_RESOURCE: Record<GeorefResource, ResourceForm> = {
     description: 'Localidades censales definidas por el INDEC.',
     base: [nombre, provincia, max],
     advanced: [departamento, ...LIST_ADVANCED],
+  },
+  'fracciones-censales': {
+    label: 'Fracciones censales',
+    description: 'Fracciones censales del INDEC (agrupan radios censales).',
+    base: [provincia, max],
+    advanced: CENSUS_ADVANCED,
+  },
+  'radios-censales': {
+    label: 'Radios censales',
+    description: 'Radios censales del INDEC: la unidad estadística más pequeña.',
+    base: [provincia, max],
+    advanced: [departamento, fraccionCensal, id, inicio, campos, aplanar],
   },
   asentamientos: {
     label: 'Asentamientos',
@@ -240,3 +252,59 @@ export const FIELDS_BY_RESOURCE: Record<GeorefResource, ResourceForm> = {
     advanced: [campos, aplanar],
   },
 }
+
+// Categorías que se muestran como solapas en la parte superior del explorador.
+// El nombre de cada solapa está pensado para un usuario no técnico.
+export interface ResourceCategory {
+  key: string
+  label: string
+  icon: string
+  description: string
+  resources: GeorefResource[]
+}
+
+export const CATEGORIES: ResourceCategory[] = [
+  {
+    key: 'territorio',
+    label: 'Territorio',
+    icon: '◎',
+    description:
+      'Unidades territoriales del país: provincias, departamentos, municipios, gobiernos locales, localidades y asentamientos.',
+    resources: [
+      'provincias',
+      'departamentos',
+      'municipios',
+      'gobiernos-locales',
+      'localidades',
+      'asentamientos',
+    ],
+  },
+  {
+    key: 'direcciones',
+    label: 'Calles y direcciones',
+    icon: '⌖',
+    description:
+      'Buscá vías de circulación o escribí una dirección con altura para normalizarla y ubicarla.',
+    resources: ['calles', 'direcciones'],
+  },
+  {
+    key: 'censo',
+    label: 'Datos censales',
+    icon: '▦',
+    description:
+      'Unidades estadísticas del INDEC: localidades, fracciones y radios censales.',
+    resources: [
+      'localidades-censales',
+      'fracciones-censales',
+      'radios-censales',
+    ],
+  },
+  {
+    key: 'inversa',
+    label: 'Georref. inversa',
+    icon: '⊕',
+    description:
+      'A partir de una coordenada (lat/lon) obtené las unidades territoriales que la contienen.',
+    resources: ['ubicacion'],
+  },
+]

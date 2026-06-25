@@ -4,7 +4,8 @@ import 'leaflet/dist/leaflet.css'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
-import type { Coord, GeorefEntity } from '../api/types'
+import type { Coord, GeorefEntity, GeorefResource } from '../api/types'
+import { fetchBoundaries, supportsBoundaries } from '../api/boundaries'
 
 // Vite no resuelve las imágenes por defecto de Leaflet; las seteamos a mano.
 const defaultIcon = L.icon({
@@ -33,14 +34,61 @@ function coordOf(e: GeorefEntity): Coord | null {
   return null
 }
 
-interface Props {
-  entities: GeorefEntity[]
+function esc(value: unknown): string {
+  return String(value).replace(
+    /[&<>"]/g,
+    (ch) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch] ?? ch,
+  )
 }
 
-export function MapView({ entities }: Props) {
+/** Popup con el detalle de la entidad: título + unidades territoriales y datos. */
+function popupHtml(e: GeorefEntity): string {
+  const title =
+    (e.nombre as string) ||
+    (e.nomenclatura as string) ||
+    e.gobierno_local?.nombre ||
+    e.municipio?.nombre ||
+    e.departamento?.nombre ||
+    e.provincia?.nombre ||
+    (e.id ? `ID ${e.id}` : 'Resultado')
+
+  const rows: [string, string][] = []
+  const add = (label: string, val?: string | null) => {
+    if (val && val !== title) rows.push([label, val])
+  }
+
+  add('Provincia', e.provincia?.nombre)
+  add('Departamento', e.departamento?.nombre)
+  add('Municipio', e.municipio?.nombre)
+  add('Gobierno local', e.gobierno_local?.nombre)
+  add('Localidad censal', e.localidad_censal?.nombre)
+  add('Calle', e.calle?.nombre)
+  add('Categoría', typeof e.categoria === 'string' ? e.categoria : undefined)
+  if (e.id) add('ID', String(e.id))
+  const c = coordOf(e)
+  if (c) add('Coordenadas', `${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}`)
+
+  const body = rows
+    .map(
+      ([k, v]) =>
+        `<div class="gx-popup__row"><span>${esc(k)}</span><b>${esc(v)}</b></div>`,
+    )
+    .join('')
+  return `<div class="gx-popup"><div class="gx-popup__title">${esc(title)}</div>${body}</div>`
+}
+
+interface Props {
+  entities: GeorefEntity[]
+  resource: GeorefResource | null
+  showBoundaries: boolean
+}
+
+export function MapView({ entities, resource, showBoundaries }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const layerRef = useRef<L.LayerGroup | null>(null)
+  const boundaryRef = useRef<L.GeoJSON | null>(null)
 
   // Inicialización del mapa (una vez).
   useEffect(() => {
@@ -61,7 +109,13 @@ export function MapView({ entities }: Props) {
     layerRef.current = L.layerGroup().addTo(map)
     mapRef.current = map
 
+    // Reencuadrar el mapa cuando el contenedor cambia de tamaño (el panel se
+    // estira al alto de la columna y puede crecer al abrir opciones avanzadas).
+    const ro = new ResizeObserver(() => map.invalidateSize())
+    ro.observe(containerRef.current)
+
     return () => {
+      ro.disconnect()
       map.remove()
       mapRef.current = null
       layerRef.current = null
@@ -82,14 +136,60 @@ export function MapView({ entities }: Props) {
       if (!c) continue
       const latlng: L.LatLngExpression = [c.lat, c.lon]
       points.push(latlng)
-      const label = (e.nombre as string) ?? (e.nomenclatura as string) ?? 'Resultado'
-      L.marker(latlng, { icon: defaultIcon }).bindPopup(label).addTo(layer)
+      L.marker(latlng, { icon: defaultIcon })
+        .bindPopup(popupHtml(e), { maxWidth: 280 })
+        .addTo(layer)
     }
 
     if (points.length > 0) {
       map.fitBounds(L.latLngBounds(points), { padding: [30, 30], maxZoom: 13 })
     }
   }, [entities])
+
+  // Límites (polígonos) del IGN para los recursos soportados.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    if (boundaryRef.current) {
+      boundaryRef.current.remove()
+      boundaryRef.current = null
+    }
+    if (!showBoundaries || !resource || !supportsBoundaries(resource)) return
+
+    const ids = entities
+      .map((e) => e.id)
+      .filter((id): id is string => typeof id === 'string' && id !== '')
+      .slice(0, 200)
+    if (ids.length === 0) return
+
+    let cancelled = false
+    fetchBoundaries(resource, ids)
+      .then((fc) => {
+        if (cancelled || !fc || !mapRef.current) return
+        const layer = L.geoJSON(fc, {
+          style: {
+            color: '#6d3cc0',
+            weight: 2,
+            fillColor: '#8453d6',
+            fillOpacity: 0.12,
+          },
+        }).addTo(map)
+        boundaryRef.current = layer
+        try {
+          map.fitBounds(layer.getBounds(), { padding: [30, 30] })
+        } catch {
+          /* sin bounds válidos */
+        }
+      })
+      .catch(() => {
+        /* si el IGN falla, el mapa sigue mostrando los centroides */
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [entities, resource, showBoundaries])
 
   return <div ref={containerRef} className="map-view" />
 }

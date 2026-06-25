@@ -1,22 +1,28 @@
-// Georreferenciación / normalización de direcciones en lote.
-// Reutiliza el cliente tipado de src/api (fetchGeorefBatch, extractEntities).
+// Motor de carga en lote: parsea el CSV, arma las consultas según el mapeo
+// columna→campo de la operación elegida, las envía en lotes y enriquece el CSV.
 
 import Papa from 'papaparse'
 import { BATCH_MAX, extractEntities, fetchGeorefBatch } from '../api/georef'
-import type { GeorefEntity } from '../api/types'
+import type { GeorefResource } from '../api/types'
+import type { BatchOperation } from './operations'
 
 export interface CsvData {
   fields: string[]
   rows: Record<string, string>[]
 }
 
-export interface ColumnMapping {
-  /** Columna del CSV que contiene la dirección a normalizar. */
-  direccion: string
-  /** Columna opcional con la provincia por fila. */
-  provincia?: string
-  /** Provincia fija aplicada a todas las filas (si no hay columna). */
-  provinciaFija?: string
+/** Origen del valor de un campo: una columna del CSV, un valor fijo, o nada. */
+export interface FieldSource {
+  mode: 'none' | 'column' | 'fixed'
+  value: string
+}
+
+export type Mapping = Record<string, FieldSource>
+
+export interface RunConfig {
+  operation: BatchOperation
+  endpoint: GeorefResource
+  mapping: Mapping
 }
 
 export interface GeocodeProgress {
@@ -25,63 +31,11 @@ export interface GeocodeProgress {
 }
 
 export interface GeocodeResult {
-  /** Filas originales + columnas `georef_*`. */
   rows: Record<string, string>[]
-  /** Cantidad de filas con coincidencia. */
+  /** Filas con coincidencia. */
   matched: number
-  /** Cantidad de filas con dirección no vacía enviadas a la API. */
+  /** Filas enviadas a la API (con los campos requeridos completos). */
   sent: number
-}
-
-/** Columnas que se agregan a cada fila del CSV de salida. */
-const ENRICH_KEYS = [
-  'georef_match',
-  'georef_nomenclatura',
-  'georef_lat',
-  'georef_lon',
-  'georef_provincia',
-  'georef_departamento',
-  'georef_localidad_censal',
-  'georef_calle',
-  'georef_altura',
-] as const
-
-type Enrichment = Record<(typeof ENRICH_KEYS)[number], string>
-
-const EMPTY_ENRICHMENT: Enrichment = {
-  georef_match: 'no',
-  georef_nomenclatura: '',
-  georef_lat: '',
-  georef_lon: '',
-  georef_provincia: '',
-  georef_departamento: '',
-  georef_localidad_censal: '',
-  georef_calle: '',
-  georef_altura: '',
-}
-
-function name(ref?: { nombre?: string }): string {
-  return ref?.nombre ?? ''
-}
-
-function num(n?: number): string {
-  return typeof n === 'number' ? String(n) : ''
-}
-
-/** Construye las columnas georef_* a partir de la entidad de `direcciones`. */
-function enrichmentFromEntity(e: GeorefEntity): Enrichment {
-  const coord = e.ubicacion ?? e.centroide
-  return {
-    georef_match: 'si',
-    georef_nomenclatura: (e.nomenclatura as string) ?? '',
-    georef_lat: num(coord?.lat),
-    georef_lon: num(coord?.lon),
-    georef_provincia: name(e.provincia),
-    georef_departamento: name(e.departamento),
-    georef_localidad_censal: name(e.localidad_censal),
-    georef_calle: name(e.calle),
-    georef_altura: num(e.altura?.valor),
-  }
 }
 
 /** Parsea un archivo CSV con encabezados. */
@@ -103,32 +57,51 @@ export function parseCsv(file: File): Promise<CsvData> {
   })
 }
 
+/** Resuelve el valor de un campo para una fila según el mapeo. */
+function valueFor(
+  field: BatchOperation['fields'][number],
+  source: FieldSource | undefined,
+  row: Record<string, string>,
+): string {
+  if (!source || source.mode === 'none') return ''
+  const raw =
+    source.mode === 'column' ? (row[source.value] ?? '') : source.value
+  let val = raw.trim()
+  if (field.numeric && val) val = val.replace(',', '.')
+  return val
+}
+
 /**
- * Georreferencia todas las filas en lotes de BATCH_MAX. Las filas con
- * dirección vacía no se envían (quedan como `georef_match=no`).
+ * Procesa todas las filas en lotes de BATCH_MAX. Las filas a las que les falta
+ * algún campo requerido no se envían (quedan como `georef_match=no`).
  */
-export async function geocodeRows(
+export async function runBatch(
   data: CsvData,
-  mapping: ColumnMapping,
+  config: RunConfig,
   onProgress?: (p: GeocodeProgress) => void,
 ): Promise<GeocodeResult> {
-  // Salida inicial: cada fila con enriquecimiento vacío.
+  const { operation, endpoint, mapping } = config
+
   const out: Record<string, string>[] = data.rows.map((r) => ({
     ...r,
-    ...EMPTY_ENRICHMENT,
+    ...operation.enrich(undefined),
   }))
 
-  // Construir solo las consultas con dirección no vacía, recordando su índice.
+  // Armar las consultas con los requeridos completos, recordando el índice.
   const sendable: { idx: number; query: Record<string, unknown> }[] = []
   data.rows.forEach((row, idx) => {
-    const direccion = (row[mapping.direccion] ?? '').trim()
-    if (!direccion) return
-    const query: Record<string, unknown> = { direccion, max: 1 }
-    const prov = mapping.provincia
-      ? (row[mapping.provincia] ?? '').trim()
-      : (mapping.provinciaFija ?? '').trim()
-    if (prov) query.provincia = prov
-    sendable.push({ idx, query })
+    const query: Record<string, unknown> = { max: 1 }
+    let ok = true
+    for (const field of operation.fields) {
+      const val = valueFor(field, mapping[field.name], row)
+      if (val) {
+        query[field.name] = field.numeric ? Number(val) : val
+        if (field.numeric && Number.isNaN(query[field.name])) ok = false
+      } else if (field.required) {
+        ok = false
+      }
+    }
+    if (ok) sendable.push({ idx, query })
   })
 
   const total = sendable.length
@@ -139,16 +112,14 @@ export async function geocodeRows(
   for (let i = 0; i < sendable.length; i += BATCH_MAX) {
     const chunk = sendable.slice(i, i + BATCH_MAX)
     const resultados = await fetchGeorefBatch(
-      'direcciones',
+      endpoint,
       chunk.map((c) => c.query),
     )
     chunk.forEach((item, j) => {
       const resp = resultados[j]
-      const entity = resp ? extractEntities('direcciones', resp)[0] : undefined
-      if (entity) {
-        matched++
-        out[item.idx] = { ...data.rows[item.idx], ...enrichmentFromEntity(entity) }
-      }
+      const entity = resp ? extractEntities(endpoint, resp)[0] : undefined
+      if (entity) matched++
+      out[item.idx] = { ...data.rows[item.idx], ...operation.enrich(entity) }
     })
     done += chunk.length
     onProgress?.({ done, total })

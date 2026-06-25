@@ -45,7 +45,9 @@ export function extractEntities(
   resource: GeorefResource,
   data: GeorefResponse,
 ): GeorefEntity[] {
-  const value = data[resource]
+  // La clave del array en la respuesta usa guión bajo aunque el path use guión
+  // (ej. `gobiernos-locales` -> `gobiernos_locales`).
+  const value = data[resource.replace(/-/g, '_')]
   if (Array.isArray(value)) return value as GeorefEntity[]
   // `ubicacion` devuelve un único objeto.
   if (value && typeof value === 'object') return [value as GeorefEntity]
@@ -103,6 +105,10 @@ export async function fetchGeorefBatch(
     )
   }
 
+  // La clave del body es el plural del recurso. Casi todos los recursos ya son
+  // plurales (provincias, direcciones…), pero `ubicacion` espera `ubicaciones`.
+  const bodyKey = resource === 'ubicacion' ? 'ubicaciones' : resource
+
   let res: Response
   try {
     res = await fetch(`${BASE_URL}/${resource}`, {
@@ -111,7 +117,7 @@ export async function fetchGeorefBatch(
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
-      body: JSON.stringify({ [resource]: queries }),
+      body: JSON.stringify({ [bodyKey]: queries }),
     })
   } catch (err) {
     throw new GeorefApiError(

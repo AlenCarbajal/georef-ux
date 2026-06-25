@@ -1,28 +1,127 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useBatchGeocode } from '../hooks/useBatchGeocode'
-import { downloadCsv } from '../batch/geocode'
+import { downloadCsv, type FieldSource, type Mapping } from '../batch/geocode'
+import { OPERATIONS, type BatchField } from '../batch/operations'
+import type { GeorefResource } from '../api/types'
 
 const PREVIEW_ROWS = 20
 
+// Heurísticas para autoseleccionar columnas según el nombre del campo.
+const GUESS: Record<string, RegExp> = {
+  direccion: /direcc|domic|calle|address/i,
+  lat: /(^|[_\s])lat/i,
+  lon: /(^|[_\s])(lon|lng)/i,
+  nombre: /nombre|^name/i,
+  provincia: /prov/i,
+  departamento: /depto|departamento|partido/i,
+  localidad_censal: /localidad|^loc/i,
+}
+
+function guessColumn(fieldName: string, columns: string[]): string {
+  const re = GUESS[fieldName]
+  return re ? (columns.find((c) => re.test(c)) ?? '') : ''
+}
+
+/** Mapeo inicial: requeridos → columna adivinada (o la primera); opcionales → columna si coincide. */
+function initMapping(fields: BatchField[], columns: string[]): Mapping {
+  const mapping: Mapping = {}
+  for (const f of fields) {
+    const guess = guessColumn(f.name, columns)
+    if (f.required) {
+      mapping[f.name] = { mode: 'column', value: guess || columns[0] || '' }
+    } else {
+      mapping[f.name] = guess
+        ? { mode: 'column', value: guess }
+        : { mode: 'none', value: '' }
+    }
+  }
+  return mapping
+}
+
+function MappingField({
+  field,
+  source,
+  columns,
+  onChange,
+}: {
+  field: BatchField
+  source: FieldSource
+  columns: string[]
+  onChange: (s: FieldSource) => void
+}) {
+  const selectVal =
+    source.mode === 'column'
+      ? `col:${source.value}`
+      : source.mode === 'fixed'
+        ? '__fixed__'
+        : '__none__'
+
+  function onSelect(val: string) {
+    if (val === '__none__') onChange({ mode: 'none', value: '' })
+    else if (val === '__fixed__') onChange({ mode: 'fixed', value: source.value })
+    else onChange({ mode: 'column', value: val.slice(4) })
+  }
+
+  return (
+    <div className="form-group">
+      <label className="field-label">
+        {field.label}
+        {field.required && <span className="req"> *</span>}
+      </label>
+      <select
+        className="form-control"
+        value={selectVal}
+        onChange={(e) => onSelect(e.target.value)}
+      >
+        {!field.required && <option value="__none__">— ninguno —</option>}
+        <optgroup label="Columna del CSV">
+          {columns.map((c) => (
+            <option key={c} value={`col:${c}`}>
+              {c}
+            </option>
+          ))}
+        </optgroup>
+        {field.allowFixed && <option value="__fixed__">Valor fijo…</option>}
+      </select>
+      {source.mode === 'fixed' && (
+        <input
+          className="form-control mapping-fixed"
+          placeholder="Valor aplicado a todas las filas"
+          value={source.value}
+          onChange={(e) => onChange({ mode: 'fixed', value: e.target.value })}
+        />
+      )}
+      <p className="field-help">{field.help}</p>
+    </div>
+  )
+}
+
 export function BatchGeocoder() {
   const batch = useBatchGeocode()
-  const [direccionCol, setDireccionCol] = useState('')
-  const [provinciaCol, setProvinciaCol] = useState('')
-  const [provinciaFija, setProvinciaFija] = useState('')
+  const [operationKey, setOperationKey] = useState(OPERATIONS[0].key)
+  const [endpoint, setEndpoint] = useState<GeorefResource>('direcciones')
+  const [mapping, setMapping] = useState<Mapping>({})
 
-  const fields = batch.data?.fields ?? []
+  const operation = OPERATIONS.find((o) => o.key === operationKey)!
+  const columns = batch.data?.fields ?? []
+  const effectiveEndpoint = operation.endpoint ?? endpoint
 
-  // Al cargar un CSV, intentar autoseleccionar la columna de dirección.
+  // Al cambiar de operación o de CSV, fijar el endpoint y rehacer el mapeo.
   useEffect(() => {
-    if (fields.length === 0) {
-      setDireccionCol('')
-      return
-    }
-    const guess =
-      fields.find((f) => /direc|domic|calle/i.test(f)) ?? fields[0]
-    setDireccionCol(guess)
-    setProvinciaCol(fields.find((f) => /prov/i.test(f)) ?? '')
-  }, [fields])
+    if (operation.endpoints) setEndpoint(operation.endpoints[0].value)
+    setMapping(initMapping(operation.fields, columns))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [operationKey, columns.join('|')])
+
+  function setSource(name: string, source: FieldSource) {
+    setMapping((m) => ({ ...m, [name]: source }))
+  }
+
+  const requiredMissing = operation.fields.some(
+    (f) =>
+      f.required &&
+      !(mapping[f.name]?.mode === 'column' && mapping[f.name]?.value),
+  )
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -31,12 +130,8 @@ export function BatchGeocoder() {
 
   function handleRun(e: React.FormEvent) {
     e.preventDefault()
-    if (!direccionCol) return
-    batch.run({
-      direccion: direccionCol,
-      provincia: provinciaCol || undefined,
-      provinciaFija: provinciaCol ? undefined : provinciaFija || undefined,
-    })
+    if (requiredMissing) return
+    batch.run({ operation, endpoint: effectiveEndpoint, mapping })
   }
 
   const resultColumns = useMemo(() => {
@@ -54,14 +149,54 @@ export function BatchGeocoder() {
   return (
     <div className="batch">
       <p className="text-muted">
-        Subí un CSV con una columna de direcciones. La app las normaliza y
-        georreferencia con el recurso <code>direcciones</code> de la API (en
-        lotes) y te devuelve el mismo CSV con columnas <code>georef_*</code>
-        (lat, lon, nomenclatura, provincia, departamento, etc.).
+        Subí un CSV, elegí qué querés hacer y mapeá cada dato a una columna. La app
+        procesa las filas en lotes contra la API y te devuelve el mismo CSV con
+        columnas <code>georef_*</code>.
       </p>
 
       <div className="form-group">
-        <label htmlFor="csv">Archivo CSV</label>
+        <label className="field-label" htmlFor="op">
+          1 · ¿Qué querés hacer?
+        </label>
+        <select
+          id="op"
+          className="form-control"
+          value={operationKey}
+          onChange={(e) => setOperationKey(e.target.value)}
+        >
+          {OPERATIONS.map((o) => (
+            <option key={o.key} value={o.key}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <p className="field-help">{operation.description}</p>
+      </div>
+
+      {operation.endpoints && (
+        <div className="form-group">
+          <label className="field-label" htmlFor="entidad">
+            Tipo de unidad
+          </label>
+          <select
+            id="entidad"
+            className="form-control"
+            value={endpoint}
+            onChange={(e) => setEndpoint(e.target.value as GeorefResource)}
+          >
+            {operation.endpoints.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div className="form-group">
+        <label className="field-label" htmlFor="csv">
+          2 · Archivo CSV
+        </label>
         <input
           id="csv"
           type="file"
@@ -74,7 +209,7 @@ export function BatchGeocoder() {
       {batch.status === 'parsing' && <p>Leyendo CSV…</p>}
 
       {batch.error && (
-        <div className="alert alert-danger" role="alert">
+        <div className="alert-danger" role="alert">
           {batch.error}
         </div>
       )}
@@ -82,58 +217,32 @@ export function BatchGeocoder() {
       {batch.data && (
         <form onSubmit={handleRun} className="batch-config">
           <p className="text-muted">
-            {batch.data.rows.length} fila(s) · {fields.length} columna(s)
+            {batch.data.rows.length} fila(s) · {columns.length} columna(s)
           </p>
 
-          <div className="form-group">
-            <label htmlFor="dir-col">Columna de dirección</label>
-            <select
-              id="dir-col"
-              className="form-control"
-              value={direccionCol}
-              onChange={(e) => setDireccionCol(e.target.value)}
-            >
-              {fields.map((f) => (
-                <option key={f} value={f}>
-                  {f}
-                </option>
-              ))}
-            </select>
-          </div>
+          <div className="mapping-title">3 · Mapeo de columnas</div>
+          {operation.fields.map((f) => (
+            <MappingField
+              key={f.name}
+              field={f}
+              source={mapping[f.name] ?? { mode: 'none', value: '' }}
+              columns={columns}
+              onChange={(s) => setSource(f.name, s)}
+            />
+          ))}
 
-          <div className="form-group">
-            <label htmlFor="prov-col">Columna de provincia (opcional)</label>
-            <select
-              id="prov-col"
-              className="form-control"
-              value={provinciaCol}
-              onChange={(e) => setProvinciaCol(e.target.value)}
-            >
-              <option value="">— ninguna —</option>
-              {fields.map((f) => (
-                <option key={f} value={f}>
-                  {f}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {!provinciaCol && (
-            <div className="form-group">
-              <label htmlFor="prov-fija">Provincia fija (opcional)</label>
-              <input
-                id="prov-fija"
-                className="form-control"
-                placeholder="Ej. Córdoba — aplica a todas las filas"
-                value={provinciaFija}
-                onChange={(e) => setProvinciaFija(e.target.value)}
-              />
-            </div>
-          )}
-
-          <button type="submit" className="btn btn-primary" disabled={running || !direccionCol}>
-            {running ? 'Procesando…' : 'Georreferenciar'}
+          <button
+            type="submit"
+            className="btn btn-primary btn-block"
+            disabled={running || requiredMissing}
+          >
+            {running ? 'Procesando…' : 'Procesar →'}
           </button>
+          {requiredMissing && (
+            <p className="field-help">
+              Asigná una columna a los campos marcados con *.
+            </p>
+          )}
         </form>
       )}
 
@@ -149,7 +258,7 @@ export function BatchGeocoder() {
             </div>
           </div>
           <small>
-            {batch.progress.done} / {batch.progress.total} direcciones enviadas
+            {batch.progress.done} / {batch.progress.total} filas procesadas
           </small>
         </div>
       )}
@@ -160,11 +269,11 @@ export function BatchGeocoder() {
             <span>
               {batch.result.matched} de {batch.result.sent} con coincidencia
               {batch.result.sent < batch.result.rows.length &&
-                ` · ${batch.result.rows.length - batch.result.sent} fila(s) sin dirección`}
+                ` · ${batch.result.rows.length - batch.result.sent} fila(s) sin datos requeridos`}
             </span>
             <button
               type="button"
-              className="btn btn-success"
+              className="btn btn-success btn-sm"
               onClick={() =>
                 downloadCsv(batch.result!.rows, geocodedName(batch.fileName))
               }
@@ -173,8 +282,8 @@ export function BatchGeocoder() {
             </button>
           </div>
 
-          <div className="table-responsive">
-            <table className="table table-striped table-condensed">
+          <div className="table-wrap">
+            <table>
               <thead>
                 <tr>
                   {resultColumns.map((c) => (
@@ -195,8 +304,8 @@ export function BatchGeocoder() {
           </div>
           {batch.result.rows.length > PREVIEW_ROWS && (
             <small className="text-muted">
-              Mostrando {PREVIEW_ROWS} de {batch.result.rows.length} filas. Descargá
-              el CSV para ver todo.
+              Mostrando {PREVIEW_ROWS} de {batch.result.rows.length} filas.
+              Descargá el CSV para ver todo.
             </small>
           )}
         </div>
