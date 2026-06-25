@@ -9,6 +9,38 @@ import './styles.css'
 
 type View = 'explorer' | 'batch'
 
+/** Logo: pin de geolocalización en tile violeta (identidad Datos Abiertos). */
+function Logo() {
+  return (
+    <svg
+      className="brand-logo"
+      viewBox="0 0 48 48"
+      xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-label="georef-ux"
+    >
+      <defs>
+        <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#ffffff" stopOpacity="0.95" />
+          <stop offset="1" stopColor="#e7dbf7" stopOpacity="0.85" />
+        </linearGradient>
+      </defs>
+      <rect
+        width="48"
+        height="48"
+        rx="11"
+        fill="rgba(255,255,255,0.14)"
+        stroke="rgba(255,255,255,0.5)"
+      />
+      <path
+        d="M24 10.5c-5.2 0-9.4 4.1-9.4 9.2 0 6.7 9.4 17.8 9.4 17.8s9.4-11.1 9.4-17.8c0-5.1-4.2-9.2-9.4-9.2z"
+        fill="url(#logoGrad)"
+      />
+      <circle cx="24" cy="19.6" r="3.7" fill="#5b2ea3" />
+    </svg>
+  )
+}
+
 export default function App() {
   const query = useGeorefQuery()
   const [view, setView] = useState<View>('explorer')
@@ -20,15 +52,13 @@ export default function App() {
       <header className="app-header">
         <div className="container header-inner">
           <div>
-            <div className="glyphs" aria-hidden="true">
-              <span className="glyph glyph--white">/</span>
-              <span className="glyph glyph--lilac">ũ</span>
-              <span className="glyph glyph--ink">+</span>
-              <span className="glyph glyph--ghost">∞</span>
-              <span className="glyph glyph--lilac">÷</span>
+            <div className="header-brand">
+              <Logo />
+              <div>
+                <p className="eyebrow">Dirección de Datos Abiertos</p>
+                <h1>georef-ux</h1>
+              </div>
             </div>
-            <p className="eyebrow">Dirección de Datos Abiertos</p>
-            <h1>georef-ux</h1>
             <p className="app-subtitle">
               Explorá y normalizá datos geográficos del Estado argentino con la{' '}
               <a
@@ -146,7 +176,8 @@ export default function App() {
               <div>
                 <h2 className="panel-title">Carga en lote (CSV)</h2>
                 <p className="panel-sub">
-                  Georreferenciá o normalizá una base entera de direcciones
+                  Normalizá o georreferenciá una base entera: direcciones,
+                  coordenadas o nombres de unidades
                 </p>
               </div>
             </div>

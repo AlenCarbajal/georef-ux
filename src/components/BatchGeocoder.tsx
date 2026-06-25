@@ -155,8 +155,47 @@ export function BatchGeocoder() {
       </p>
 
       <div className="form-group">
+        <label className="field-label" htmlFor="op">
+          1 · ¿Qué querés hacer?
+        </label>
+        <select
+          id="op"
+          className="form-control"
+          value={operationKey}
+          onChange={(e) => setOperationKey(e.target.value)}
+        >
+          {OPERATIONS.map((o) => (
+            <option key={o.key} value={o.key}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <p className="field-help">{operation.description}</p>
+      </div>
+
+      {operation.endpoints && (
+        <div className="form-group">
+          <label className="field-label" htmlFor="entidad">
+            Tipo de unidad
+          </label>
+          <select
+            id="entidad"
+            className="form-control"
+            value={endpoint}
+            onChange={(e) => setEndpoint(e.target.value as GeorefResource)}
+          >
+            {operation.endpoints.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div className="form-group">
         <label className="field-label" htmlFor="csv">
-          Archivo CSV
+          2 · Archivo CSV
         </label>
         <input
           id="csv"
@@ -181,46 +220,7 @@ export function BatchGeocoder() {
             {batch.data.rows.length} fila(s) · {columns.length} columna(s)
           </p>
 
-          <div className="form-group">
-            <label className="field-label" htmlFor="op">
-              ¿Qué querés hacer?
-            </label>
-            <select
-              id="op"
-              className="form-control"
-              value={operationKey}
-              onChange={(e) => setOperationKey(e.target.value)}
-            >
-              {OPERATIONS.map((o) => (
-                <option key={o.key} value={o.key}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-            <p className="field-help">{operation.description}</p>
-          </div>
-
-          {operation.endpoints && (
-            <div className="form-group">
-              <label className="field-label" htmlFor="entidad">
-                Tipo de unidad
-              </label>
-              <select
-                id="entidad"
-                className="form-control"
-                value={endpoint}
-                onChange={(e) => setEndpoint(e.target.value as GeorefResource)}
-              >
-                {operation.endpoints.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="mapping-title">Mapeo de columnas</div>
+          <div className="mapping-title">3 · Mapeo de columnas</div>
           {operation.fields.map((f) => (
             <MappingField
               key={f.name}
