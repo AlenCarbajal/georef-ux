@@ -45,7 +45,9 @@ export function extractEntities(
   resource: GeorefResource,
   data: GeorefResponse,
 ): GeorefEntity[] {
-  const value = data[resource]
+  // La clave del array en la respuesta usa guión bajo aunque el path use guión
+  // (ej. `gobiernos-locales` -> `gobiernos_locales`).
+  const value = data[resource.replace(/-/g, '_')]
   if (Array.isArray(value)) return value as GeorefEntity[]
   // `ubicacion` devuelve un único objeto.
   if (value && typeof value === 'object') return [value as GeorefEntity]

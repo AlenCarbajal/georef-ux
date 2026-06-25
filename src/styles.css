@@ -145,6 +145,36 @@ body {
   border-left: 3px solid #eef2f4;
 }
 
+/* Solapas de categoría (Territorio / Calles y direcciones / etc.). */
+.category-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+  margin-bottom: 0.85rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.category-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.82rem;
+  color: #555;
+  cursor: pointer;
+}
+
+.category-tab:hover {
+  color: #1a6ea8;
+}
+
+.category-tab.is-active {
+  color: #1a6ea8;
+  border-bottom-color: #37bbed;
+  font-weight: 600;
+}
+
 .builder-intro {
   margin: 0 0 1rem;
   font-size: 0.85rem;
@@ -153,6 +183,10 @@ body {
   border-left: 3px solid #37bbed;
   padding: 0.5rem 0.7rem;
   border-radius: 3px;
+}
+
+.resource-single {
+  margin-bottom: 1rem;
 }
 
 /* Snippets de código (cURL / Python / R / JS). */

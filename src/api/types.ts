@@ -8,6 +8,8 @@ export const RESOURCES = [
   'gobiernos-locales',
   'localidades',
   'localidades-censales',
+  'fracciones-censales',
+  'radios-censales',
   'asentamientos',
   'calles',
   'direcciones',

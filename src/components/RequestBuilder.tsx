@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { buildUrl } from '../api/georef'
-import { FIELDS_BY_RESOURCE, RESOURCE_GROUPS } from '../api/fields'
+import { CATEGORIES, FIELDS_BY_RESOURCE } from '../api/fields'
 import type { FieldDef } from '../api/fields'
 import { buildSnippets } from '../api/snippets'
 import type { GeorefResource, QueryParams } from '../api/types'
@@ -146,6 +146,9 @@ export function RequestBuilder({ loading, onSubmit }: Props) {
   const form = FIELDS_BY_RESOURCE[resource]
   const url = useMemo(() => buildUrl(resource, values), [resource, values])
 
+  const activeCategory =
+    CATEGORIES.find((c) => c.resources.includes(resource)) ?? CATEGORIES[0]
+
   function changeResource(next: GeorefResource) {
     setResource(next)
     setValues({}) // los params dependen del recurso
@@ -163,31 +166,45 @@ export function RequestBuilder({ loading, onSubmit }: Props) {
 
   return (
     <form className="request-builder" onSubmit={handleSubmit}>
-      <p className="builder-intro">
-        Elegí qué querés consultar y completá los datos. No necesitás saber
-        programar: armamos la consulta por vos.
-      </p>
-
-      <div className="form-group">
-        <label htmlFor="resource">¿Qué querés consultar?</label>
-        <select
-          id="resource"
-          className="form-control"
-          value={resource}
-          onChange={(e) => changeResource(e.target.value as GeorefResource)}
-        >
-          {RESOURCE_GROUPS.map((group) => (
-            <optgroup key={group.label} label={group.label}>
-              {group.resources.map((r) => (
-                <option key={r} value={r}>
-                  {FIELDS_BY_RESOURCE[r].label}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-        <p className="field-help">{form.description}</p>
+      <div className="category-tabs" role="tablist">
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat.key}
+            type="button"
+            role="tab"
+            aria-selected={cat.key === activeCategory.key}
+            className={`category-tab${
+              cat.key === activeCategory.key ? ' is-active' : ''
+            }`}
+            onClick={() => changeResource(cat.resources[0])}
+          >
+            {cat.label}
+          </button>
+        ))}
       </div>
+
+      <p className="builder-intro">{activeCategory.description}</p>
+
+      {activeCategory.resources.length > 1 ? (
+        <div className="form-group">
+          <label htmlFor="resource">¿Qué querés consultar?</label>
+          <select
+            id="resource"
+            className="form-control"
+            value={resource}
+            onChange={(e) => changeResource(e.target.value as GeorefResource)}
+          >
+            {activeCategory.resources.map((r) => (
+              <option key={r} value={r}>
+                {FIELDS_BY_RESOURCE[r].label}
+              </option>
+            ))}
+          </select>
+          <p className="field-help">{form.description}</p>
+        </div>
+      ) : (
+        <p className="field-help resource-single">{form.description}</p>
+      )}
 
       {form.base.map((f) => (
         <Field
