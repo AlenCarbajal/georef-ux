@@ -6,6 +6,7 @@ import { BatchGeocoder } from './components/BatchGeocoder'
 import { useGeorefQuery } from './hooks/useGeorefQuery'
 import { supportsBoundaries } from './api/boundaries'
 import georefLogo from './assets/georef-logo.png'
+import sicytLogo from './assets/secretaria-innovacion-blanco.png'
 import './styles.css'
 
 type View = 'explorer' | 'batch'
@@ -190,9 +191,15 @@ export default function App() {
               <a href="mailto:datosargentina@sicyt.gob.ar">
                 datosargentina@sicyt.gob.ar
               </a>
+              <br />
+              Hecho con datos abiertos · CC BY 4.0
             </span>
           </span>
-          <span>Hecho con datos abiertos · CC BY 4.0</span>
+          <img
+            className="footer-logo"
+            src={sicytLogo}
+            alt="Secretaría de Innovación, Ciencia y Tecnología — Jefatura de Gabinete de Ministros"
+          />
         </div>
       </footer>
     </div>

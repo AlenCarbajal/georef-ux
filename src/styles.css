@@ -794,28 +794,36 @@ td.col-coord {
 
 /* ============ FOOTER ============ */
 .app-footer {
-  border-top: 1px solid var(--line);
   margin-top: 1rem;
-  padding: 1.5rem 0;
-  color: var(--muted);
+  padding: 1.75rem 0;
+  background: var(--violet-900);
+  color: rgba(255, 255, 255, 0.82);
   font-size: 0.85rem;
 }
 .app-footer .footer-inner {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 1.5rem 2rem;
   flex-wrap: wrap;
 }
 .app-footer a {
-  color: var(--violet-700);
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .footer-credit {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
   max-width: 60ch;
-  line-height: 1.45;
+  line-height: 1.5;
+}
+.footer-logo {
+  height: 58px;
+  width: auto;
+  flex: none;
+  opacity: 0.95;
 }
 .glyph-mini {
   display: inline-flex;
