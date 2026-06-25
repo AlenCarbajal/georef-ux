@@ -553,6 +553,34 @@ select.form-control {
   border: 1.5px solid var(--line);
 }
 
+/* Popup de marcador con detalle de la entidad. */
+.gx-popup {
+  font-family: 'Encode Sans', sans-serif;
+  min-width: 170px;
+}
+.gx-popup__title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--ink);
+  margin-bottom: 0.35rem;
+}
+.gx-popup__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.9rem;
+  font-size: 0.78rem;
+  padding: 0.12rem 0;
+  border-top: 1px solid var(--line);
+}
+.gx-popup__row span {
+  color: var(--muted);
+}
+.gx-popup__row b {
+  color: var(--ink);
+  font-weight: 600;
+  text-align: right;
+}
+
 /* ============ RESULTS ============ */
 .results-bar {
   display: flex;

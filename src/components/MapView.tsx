@@ -33,6 +33,50 @@ function coordOf(e: GeorefEntity): Coord | null {
   return null
 }
 
+function esc(value: unknown): string {
+  return String(value).replace(
+    /[&<>"]/g,
+    (ch) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch] ?? ch,
+  )
+}
+
+/** Popup con el detalle de la entidad: título + unidades territoriales y datos. */
+function popupHtml(e: GeorefEntity): string {
+  const title =
+    (e.nombre as string) ||
+    (e.nomenclatura as string) ||
+    e.gobierno_local?.nombre ||
+    e.municipio?.nombre ||
+    e.departamento?.nombre ||
+    e.provincia?.nombre ||
+    (e.id ? `ID ${e.id}` : 'Resultado')
+
+  const rows: [string, string][] = []
+  const add = (label: string, val?: string | null) => {
+    if (val && val !== title) rows.push([label, val])
+  }
+
+  add('Provincia', e.provincia?.nombre)
+  add('Departamento', e.departamento?.nombre)
+  add('Municipio', e.municipio?.nombre)
+  add('Gobierno local', e.gobierno_local?.nombre)
+  add('Localidad censal', e.localidad_censal?.nombre)
+  add('Calle', e.calle?.nombre)
+  add('Categoría', typeof e.categoria === 'string' ? e.categoria : undefined)
+  if (e.id) add('ID', String(e.id))
+  const c = coordOf(e)
+  if (c) add('Coordenadas', `${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}`)
+
+  const body = rows
+    .map(
+      ([k, v]) =>
+        `<div class="gx-popup__row"><span>${esc(k)}</span><b>${esc(v)}</b></div>`,
+    )
+    .join('')
+  return `<div class="gx-popup"><div class="gx-popup__title">${esc(title)}</div>${body}</div>`
+}
+
 interface Props {
   entities: GeorefEntity[]
 }
@@ -88,8 +132,9 @@ export function MapView({ entities }: Props) {
       if (!c) continue
       const latlng: L.LatLngExpression = [c.lat, c.lon]
       points.push(latlng)
-      const label = (e.nombre as string) ?? (e.nomenclatura as string) ?? 'Resultado'
-      L.marker(latlng, { icon: defaultIcon }).bindPopup(label).addTo(layer)
+      L.marker(latlng, { icon: defaultIcon })
+        .bindPopup(popupHtml(e), { maxWidth: 280 })
+        .addTo(layer)
     }
 
     if (points.length > 0) {
