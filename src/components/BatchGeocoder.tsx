@@ -74,7 +74,7 @@ function MappingField({
         onChange={(e) => onSelect(e.target.value)}
       >
         {!field.required && <option value="__none__">— ninguno —</option>}
-        <optgroup label="Columna del CSV">
+        <optgroup label="Columna del archivo">
           {columns.map((c) => (
             <option key={c} value={`col:${c}`}>
               {c}
@@ -149,9 +149,9 @@ export function BatchGeocoder() {
   return (
     <div className="batch">
       <p className="text-muted">
-        Subí un CSV, elegí qué querés hacer y mapeá cada dato a una columna. La app
-        procesa las filas en lotes contra la API y te devuelve el mismo CSV con
-        columnas <code>georef_*</code>.
+        Subí un archivo CSV o Excel (.xls/.xlsx), elegí qué querés hacer y mapeá
+        cada dato a una columna. La app procesa las filas en lotes contra la API y
+        te devuelve un CSV con columnas <code>georef_*</code>.
       </p>
 
       <div className="form-group">
@@ -195,18 +195,18 @@ export function BatchGeocoder() {
 
       <div className="form-group">
         <label className="field-label" htmlFor="csv">
-          2 · Archivo CSV
+          2 · Archivo CSV o Excel
         </label>
         <input
           id="csv"
           type="file"
-          accept=".csv,text/csv"
+          accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           className="form-control"
           onChange={handleFile}
         />
       </div>
 
-      {batch.status === 'parsing' && <p>Leyendo CSV…</p>}
+      {batch.status === 'parsing' && <p>Leyendo archivo…</p>}
 
       {batch.error && (
         <div className="alert-danger" role="alert">
@@ -316,5 +316,5 @@ export function BatchGeocoder() {
 
 function geocodedName(fileName: string | null): string {
   if (!fileName) return 'georef.csv'
-  return fileName.replace(/\.csv$/i, '') + '_georef.csv'
+  return fileName.replace(/\.(csv|xls|xlsx)$/i, '') + '_georef.csv'
 }

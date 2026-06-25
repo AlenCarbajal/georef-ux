@@ -57,6 +57,53 @@ export function parseCsv(file: File): Promise<CsvData> {
   })
 }
 
+/**
+ * Parsea un archivo Excel (.xls/.xlsx) con SheetJS: toma la primera hoja y usa
+ * la primera fila como encabezados. Todos los valores se devuelven como texto.
+ */
+export async function parseExcel(file: File): Promise<CsvData> {
+  // Import dinámico: SheetJS es pesado y solo se necesita para Excel, así que
+  // se baja en un chunk aparte recién cuando el usuario sube un .xls/.xlsx.
+  const XLSX = await import('xlsx')
+  const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' })
+  const sheetName = wb.SheetNames[0]
+  const ws = sheetName ? wb.Sheets[sheetName] : undefined
+  if (!ws) throw new Error('El archivo no tiene hojas.')
+  const matrix = XLSX.utils.sheet_to_json<unknown[]>(ws, {
+    header: 1,
+    raw: false,
+    defval: '',
+    blankrows: false,
+  })
+  if (matrix.length === 0) throw new Error('La hoja está vacía.')
+  const fields = (matrix[0] as unknown[])
+    .map((h) => String(h ?? '').trim())
+    .filter(Boolean)
+  if (fields.length === 0) {
+    throw new Error('No se detectaron encabezados en la primera fila.')
+  }
+  const rows = (matrix.slice(1) as unknown[][])
+    .map((arr) => {
+      const obj: Record<string, string> = {}
+      fields.forEach((f, i) => {
+        obj[f] = String(arr[i] ?? '').trim()
+      })
+      return obj
+    })
+    .filter((r) => Object.values(r).some((v) => v !== ''))
+  return { fields, rows }
+}
+
+/**
+ * Parsea una planilla por extensión: CSV con PapaParse, Excel (.xls/.xlsx) con
+ * SheetJS. Devuelve siempre la misma forma `{ fields, rows }`.
+ */
+export function parseFile(file: File): Promise<CsvData> {
+  const name = file.name.toLowerCase()
+  if (name.endsWith('.xlsx') || name.endsWith('.xls')) return parseExcel(file)
+  return parseCsv(file)
+}
+
 /** Resuelve el valor de un campo para una fila según el mapeo. */
 function valueFor(
   field: BatchOperation['fields'][number],

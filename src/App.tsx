@@ -5,15 +5,15 @@ import { MapView } from './components/MapView'
 import { BatchGeocoder } from './components/BatchGeocoder'
 import { useGeorefQuery } from './hooks/useGeorefQuery'
 import { supportsBoundaries } from './api/boundaries'
-import georefLogo from './assets/georef-logo.png'
+import georefMark from './assets/georef-mark.png'
 import sicytLogo from './assets/secretaria-innovacion-blanco.png'
 import './styles.css'
 
 type View = 'explorer' | 'batch'
 
-/** Logo oficial de Georef (pin con tres puntos + wordmark), de Datos Abiertos. */
+/** Marca oficial de Georef: el pin con tres puntos (sin el wordmark). */
 function Logo() {
-  return <img className="brand-logo" src={georefLogo} alt="Georef" />
+  return <img className="brand-logo" src={georefMark} alt="Georef" />
 }
 
 export default function App() {
@@ -26,13 +26,10 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="container header-inner">
-          <div>
+          <div className="header-left">
             <div className="header-brand">
               <Logo />
-              <div>
-                <p className="eyebrow">Dirección de Datos Abiertos</p>
-                <h1>georef-ux</h1>
-              </div>
+              <h1>georef-ux</h1>
             </div>
             <p className="app-subtitle">
               Explorá y normalizá datos geográficos del Estado argentino con la{' '}
@@ -45,29 +42,14 @@ export default function App() {
               </a>
               , sin escribir código.
             </p>
-            <nav className="app-tabs">
-              <button
-                type="button"
-                className={view === 'explorer' ? 'is-active' : ''}
-                onClick={() => setView('explorer')}
-              >
-                Explorador
-              </button>
-              <button
-                type="button"
-                className={view === 'batch' ? 'is-active' : ''}
-                onClick={() => setView('batch')}
-              >
-                Carga en lote (CSV)
-              </button>
-            </nav>
           </div>
           <div className="header-meta">
-            <strong>Datos Argentina</strong>
-            Secretaría de Innovación,
-            <br />
-            Ciencia y Tecnología
-            <br />
+            <div>
+              <strong>Dirección de Datos Abiertos</strong>
+              <span className="meta-sub">
+                Secretaría de Innovación, Ciencia y Tecnología
+              </span>
+            </div>
             <a
               className="pill-link"
               href="https://www.argentina.gob.ar/georef"
@@ -79,6 +61,27 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      <nav className="view-nav">
+        <div className="container">
+          <div className="view-switch">
+            <button
+              type="button"
+              className={view === 'explorer' ? 'is-active' : ''}
+              onClick={() => setView('explorer')}
+            >
+              Explorador
+            </button>
+            <button
+              type="button"
+              className={view === 'batch' ? 'is-active' : ''}
+              onClick={() => setView('batch')}
+            >
+              Carga en lote (CSV)
+            </button>
+          </div>
+        </div>
+      </nav>
 
       {view === 'explorer' ? (
         <main className="container app-main">
