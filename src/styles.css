@@ -1,0 +1,136 @@
+/* Ajustes propios sobre Poncho. Layout en grilla: consulta + mapa arriba,
+   resultados a lo ancho debajo. */
+
+:root {
+  --gx-gap: 1rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.app-header {
+  background: #37bbed; /* celeste GOB.AR */
+  color: #fff;
+  padding: 1.25rem 0;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.app-subtitle {
+  margin: 0.25rem 0 0;
+  opacity: 0.95;
+}
+
+.app-subtitle a {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.app-main {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  grid-template-areas:
+    'builder map'
+    'results results';
+  gap: var(--gx-gap);
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
+.panel-builder {
+  grid-area: builder;
+}
+.panel-map {
+  grid-area: map;
+}
+.panel-results {
+  grid-area: results;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+.panel-title {
+  margin-top: 0;
+  font-size: 1.1rem;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.5rem;
+}
+
+.request-builder .form-group {
+  margin-bottom: 0.75rem;
+}
+
+.generated-url {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+  font-size: 0.8rem;
+}
+
+.generated-url__label {
+  font-weight: bold;
+  color: #666;
+}
+
+.generated-url code {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: #f5f5f5;
+  padding: 0.25rem 0.4rem;
+  border-radius: 3px;
+}
+
+.map-view {
+  height: 420px;
+  width: 100%;
+  border-radius: 4px;
+}
+
+.results-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.results-json {
+  max-height: 480px;
+  overflow: auto;
+  font-size: 0.8rem;
+}
+
+.results-status {
+  padding: 1rem 0;
+}
+
+.app-footer {
+  border-top: 1px solid #e0e0e0;
+  padding: 1rem 0;
+  color: #777;
+}
+
+@media (max-width: 768px) {
+  .app-main {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'builder'
+      'map'
+      'results';
+  }
+}

@@ -1,0 +1,84 @@
+// Cliente tipado de la API Georef v2. Única fuente de verdad de red:
+// componentes y (en Fase 2) el batch reutilizan BASE_URL, buildUrl y los tipos.
+
+import type {
+  GeorefEntity,
+  GeorefResource,
+  GeorefResponse,
+  QueryParams,
+} from './types'
+
+export const BASE_URL = 'https://apis.datos.gob.ar/georef/api'
+
+/** Error con el mensaje legible que devuelve Georef en `errores[]`. */
+export class GeorefApiError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+  ) {
+    super(message)
+    this.name = 'GeorefApiError'
+  }
+}
+
+/** Construye la URL del recurso omitiendo parámetros vacíos. */
+export function buildUrl(
+  resource: GeorefResource,
+  params: QueryParams,
+): string {
+  const search = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    const v = value.trim()
+    if (v !== '') search.set(key, v)
+  }
+  const qs = search.toString()
+  return `${BASE_URL}/${resource}${qs ? `?${qs}` : ''}`
+}
+
+/** Devuelve el array de resultados desde la respuesta (maneja `ubicacion`). */
+export function extractEntities(
+  resource: GeorefResource,
+  data: GeorefResponse,
+): GeorefEntity[] {
+  const value = data[resource]
+  if (Array.isArray(value)) return value as GeorefEntity[]
+  // `ubicacion` devuelve un único objeto.
+  if (value && typeof value === 'object') return [value as GeorefEntity]
+  return []
+}
+
+/** Ejecuta el GET y normaliza errores de red y de la API. */
+export async function fetchGeoref(
+  resource: GeorefResource,
+  params: QueryParams,
+): Promise<GeorefResponse> {
+  const url = buildUrl(resource, params)
+  let res: Response
+  try {
+    res = await fetch(url, { headers: { Accept: 'application/json' } })
+  } catch (err) {
+    throw new GeorefApiError(
+      `No se pudo conectar con la API: ${(err as Error).message}`,
+    )
+  }
+
+  let body: GeorefResponse | null = null
+  try {
+    body = (await res.json()) as GeorefResponse
+  } catch {
+    // respuesta sin JSON (raro): caemos al manejo por status
+  }
+
+  if (!res.ok) {
+    const msg = body?.errores?.map((e) => e.mensaje).filter(Boolean).join(' · ')
+    throw new GeorefApiError(
+      msg || `La API respondió ${res.status} ${res.statusText}`,
+      res.status,
+    )
+  }
+
+  if (!body) {
+    throw new GeorefApiError('Respuesta vacía o no válida de la API.')
+  }
+  return body
+}
