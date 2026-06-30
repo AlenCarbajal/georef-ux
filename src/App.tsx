@@ -1,8 +1,7 @@
-import { useState } from 'react'
+import { Suspense, lazy, useState } from 'react'
 import { RequestBuilder } from './components/RequestBuilder'
 import { ResultsPanel } from './components/ResultsPanel'
 import { MapView } from './components/MapView'
-import { BatchGeocoder } from './components/BatchGeocoder'
 import { useGeorefQuery } from './hooks/useGeorefQuery'
 import { supportsBoundaries } from './api/boundaries'
 import georefMark from './assets/georef-mark.png'
@@ -10,6 +9,14 @@ import sicytLogo from './assets/secretaria-innovacion-blanco.png'
 import './styles.css'
 
 type View = 'explorer' | 'batch'
+
+// Carga diferida: papaparse/xlsx no deben pesar en el bundle inicial del
+// explorador, que es la vista por defecto.
+const BatchGeocoder = lazy(() =>
+  import('./components/BatchGeocoder').then((m) => ({
+    default: m.BatchGeocoder,
+  })),
+)
 
 /** Marca oficial de Georef: el pin con tres puntos (sin el wordmark). */
 function Logo() {
@@ -159,7 +166,9 @@ export default function App() {
                 </p>
               </div>
             </div>
-            <BatchGeocoder />
+            <Suspense fallback={<p className="results-status">Cargando…</p>}>
+              <BatchGeocoder />
+            </Suspense>
           </section>
         </main>
       )}
