@@ -8,6 +8,7 @@ import {
   type GeocodeResult,
   type RunConfig,
 } from '../batch/geocode'
+import type { PyStatus } from '../batch/pygeorefar'
 
 export type BatchStatus = 'idle' | 'parsing' | 'ready' | 'running' | 'done' | 'error'
 
@@ -18,6 +19,8 @@ export interface BatchState {
   progress: GeocodeProgress | null
   result: GeocodeResult | null
   error: string | null
+  /** Estado de inicialización del motor Python (Pyodide). */
+  pyStatus: PyStatus | null
 }
 
 const initial: BatchState = {
@@ -27,6 +30,7 @@ const initial: BatchState = {
   progress: null,
   result: null,
   error: null,
+  pyStatus: null,
 }
 
 export function useBatchGeocode() {
@@ -62,10 +66,13 @@ export function useBatchGeocode() {
       progress: { done: 0, total: data.rows.length },
     }))
     try {
-      const result = await runBatch(data, config, (progress) =>
-        setState((s) => ({ ...s, progress })),
+      const result = await runBatch(
+        data,
+        config,
+        (progress) => setState((s) => ({ ...s, progress })),
+        (pyStatus) => setState((s) => ({ ...s, pyStatus })),
       )
-      setState((s) => ({ ...s, status: 'done', result }))
+      setState((s) => ({ ...s, status: 'done', result, pyStatus: null }))
     } catch (err) {
       const message =
         err instanceof GeorefApiError

@@ -1,10 +1,11 @@
-// Motor de carga en lote: parsea el CSV, arma las consultas según el mapeo
-// columna→campo de la operación elegida, las envía en lotes y enriquece el CSV.
+// Motor de carga en lote: parsea el archivo (CSV/Excel), arma las consultas
+// según el mapeo columna→campo, las ejecuta con pygeorefar (Pyodide) en lotes
+// troceados y enriquece las filas con los campos de salida elegidos.
 
 import Papa from 'papaparse'
-import { BATCH_MAX, extractEntities, fetchGeorefBatch } from '../api/georef'
 import type { GeorefResource } from '../api/types'
-import type { BatchOperation } from './operations'
+import { outputColumn, type BatchOperation } from './operations'
+import { runBatchPy, type PyStatus } from './pygeorefar'
 
 export interface CsvData {
   fields: string[]
@@ -23,6 +24,8 @@ export interface RunConfig {
   operation: BatchOperation
   endpoint: GeorefResource
   mapping: Mapping
+  /** Rutas de campos del modelo a incluir en la salida (ej. `provincia.nombre`). */
+  fields: string[]
 }
 
 export interface GeocodeProgress {
@@ -118,21 +121,29 @@ function valueFor(
   return val
 }
 
+/** Fila de salida vacía (sin coincidencia) para los campos elegidos. */
+function emptyRow(fields: string[]): Record<string, string> {
+  const o: Record<string, string> = { georef_match: 'no' }
+  for (const f of fields) o[outputColumn(f)] = ''
+  return o
+}
+
 /**
- * Procesa todas las filas en lotes de BATCH_MAX. Las filas a las que les falta
- * algún campo requerido no se envían (quedan como `georef_match=no`).
+ * Procesa todas las filas con pygeorefar (Pyodide), que trocea las consultas en
+ * lotes POST. Las filas a las que les falta algún campo requerido no se envían
+ * (quedan como `georef_match=no`). Devuelve el archivo enriquecido con las
+ * columnas `georef_*` de los campos elegidos.
  */
 export async function runBatch(
   data: CsvData,
   config: RunConfig,
   onProgress?: (p: GeocodeProgress) => void,
+  onStatus?: (s: PyStatus) => void,
 ): Promise<GeocodeResult> {
-  const { operation, endpoint, mapping } = config
+  const { operation, endpoint, mapping, fields } = config
 
-  const out: Record<string, string>[] = data.rows.map((r) => ({
-    ...r,
-    ...operation.enrich(undefined),
-  }))
+  const blank = emptyRow(fields)
+  const out: Record<string, string>[] = data.rows.map((r) => ({ ...r, ...blank }))
 
   // Armar las consultas con los requeridos completos, recordando el índice.
   const sendable: { idx: number; query: Record<string, unknown> }[] = []
@@ -152,25 +163,23 @@ export async function runBatch(
   })
 
   const total = sendable.length
-  let done = 0
-  let matched = 0
-  onProgress?.({ done, total })
+  onProgress?.({ done: 0, total })
 
-  for (let i = 0; i < sendable.length; i += BATCH_MAX) {
-    const chunk = sendable.slice(i, i + BATCH_MAX)
-    const resultados = await fetchGeorefBatch(
-      endpoint,
-      chunk.map((c) => c.query),
-    )
-    chunk.forEach((item, j) => {
-      const resp = resultados[j]
-      const entity = resp ? extractEntities(endpoint, resp)[0] : undefined
-      if (entity) matched++
-      out[item.idx] = { ...data.rows[item.idx], ...operation.enrich(entity) }
-    })
-    done += chunk.length
-    onProgress?.({ done, total })
-  }
+  const pyRows = await runBatchPy(
+    endpoint,
+    sendable.map((s) => s.query),
+    fields,
+    (done) => onProgress?.({ done, total }),
+    onStatus,
+  )
+
+  let matched = 0
+  sendable.forEach((item, j) => {
+    const r = pyRows[j]
+    if (!r) return
+    if (r.georef_match === 'si') matched++
+    out[item.idx] = { ...data.rows[item.idx], ...r }
+  })
 
   return { rows: out, matched, sent: total }
 }

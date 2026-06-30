@@ -1,8 +1,9 @@
 // Operaciones de carga en lote: qué se puede normalizar/georreferenciar a partir
-// de un CSV. Cada operación define el endpoint, los campos mapeables (columna del
-// CSV o valor fijo) y cómo construir las columnas `georef_*` de salida.
+// de un archivo. Cada operación define el endpoint, los campos de entrada
+// mapeables (columna del archivo o valor fijo) y el catálogo de campos de salida
+// (los que devuelve el modelo de pygeorefar) que el usuario puede elegir incluir.
 
-import type { GeorefEntity, GeorefResource } from '../api/types'
+import type { GeorefResource } from '../api/types'
 
 export interface BatchField {
   name: string
@@ -15,6 +16,12 @@ export interface BatchField {
   help: string
 }
 
+/** Campo de salida elegible: ruta en el modelo (ej. `provincia.nombre`) y etiqueta. */
+export interface OutputField {
+  path: string
+  label: string
+}
+
 export interface BatchOperation {
   key: string
   label: string
@@ -22,61 +29,82 @@ export interface BatchOperation {
   /** Si está, el usuario elige la entidad; si no, el endpoint es fijo. */
   endpoints?: { value: GeorefResource; label: string }[]
   endpoint?: GeorefResource
+  /** Campos de entrada (mapeo columna→consulta). */
   fields: BatchField[]
-  /** Columnas de salida en orden (para encabezado estable). */
-  outputColumns: string[]
-  /** Construye las columnas de salida desde la entidad (o vacías si no hubo match). */
-  enrich: (e: GeorefEntity | undefined) => Record<string, string>
+  /** Campos de salida disponibles (del modelo de pygeorefar). */
+  availableFields: OutputField[]
+  /** Campos de salida marcados por defecto. */
+  defaultFields: string[]
 }
 
-const nm = (r?: { nombre?: string }) => r?.nombre ?? ''
-const num = (n?: number) => (typeof n === 'number' ? String(n) : '')
-function coordOf(e: GeorefEntity) {
-  return (
-    e.ubicacion ??
-    e.centroide ??
-    (typeof e.lat === 'number' && typeof e.lon === 'number'
-      ? { lat: e.lat, lon: e.lon }
-      : undefined)
-  )
+/** Columna de salida `georef_<campo>` para una ruta del modelo. */
+export function outputColumn(path: string): string {
+  return 'georef_' + path.replace(/\./g, '_')
 }
 
-/** Devuelve un objeto con todas las claves en '' (fila sin coincidencia). */
-function empty(cols: string[]): Record<string, string> {
-  const o: Record<string, string> = {}
-  for (const c of cols) o[c] = ''
-  o.georef_match = 'no'
-  return o
+/** Columnas de salida (con georef_match adelante) para los campos elegidos. */
+export function outputColumns(fields: string[]): string[] {
+  return ['georef_match', ...fields.map(outputColumn)]
 }
 
-const DIRECCIONES_COLS = [
-  'georef_match',
-  'georef_nomenclatura',
-  'georef_lat',
-  'georef_lon',
-  'georef_provincia',
-  'georef_departamento',
-  'georef_localidad_censal',
-  'georef_calle',
-  'georef_altura',
+// --- Catálogos de campos de salida por modelo -------------------------------
+
+const DIRECCIONES_FIELDS: OutputField[] = [
+  { path: 'nomenclatura', label: 'Nomenclatura' },
+  { path: 'ubicacion.lat', label: 'Latitud' },
+  { path: 'ubicacion.lon', label: 'Longitud' },
+  { path: 'calle.nombre', label: 'Calle' },
+  { path: 'altura.valor', label: 'Altura' },
+  { path: 'provincia.nombre', label: 'Provincia' },
+  { path: 'provincia.id', label: 'Provincia (id)' },
+  { path: 'departamento.nombre', label: 'Departamento' },
+  { path: 'departamento.id', label: 'Departamento (id)' },
+  { path: 'localidad_censal.nombre', label: 'Localidad censal' },
+  { path: 'piso', label: 'Piso' },
+]
+const DIRECCIONES_DEFAULT = [
+  'nomenclatura',
+  'ubicacion.lat',
+  'ubicacion.lon',
+  'calle.nombre',
+  'altura.valor',
+  'provincia.nombre',
+  'departamento.nombre',
+  'localidad_censal.nombre',
 ]
 
-const UBICACION_COLS = [
-  'georef_match',
-  'georef_provincia',
-  'georef_departamento',
-  'georef_municipio',
-  'georef_gobierno_local',
+const UBICACION_FIELDS: OutputField[] = [
+  { path: 'provincia.nombre', label: 'Provincia' },
+  { path: 'provincia.id', label: 'Provincia (id)' },
+  { path: 'departamento.nombre', label: 'Departamento' },
+  { path: 'departamento.id', label: 'Departamento (id)' },
+  { path: 'municipio.nombre', label: 'Municipio' },
+  { path: 'municipio.id', label: 'Municipio (id)' },
+  { path: 'lat', label: 'Latitud' },
+  { path: 'lon', label: 'Longitud' },
+]
+const UBICACION_DEFAULT = [
+  'provincia.nombre',
+  'departamento.nombre',
+  'municipio.nombre',
 ]
 
-const TERRITORIAL_COLS = [
-  'georef_match',
-  'georef_id',
-  'georef_nombre',
-  'georef_provincia',
-  'georef_departamento',
-  'georef_lat',
-  'georef_lon',
+const TERRITORIAL_FIELDS: OutputField[] = [
+  { path: 'id', label: 'ID oficial' },
+  { path: 'nombre', label: 'Nombre oficial' },
+  { path: 'centroide.lat', label: 'Latitud (centroide)' },
+  { path: 'centroide.lon', label: 'Longitud (centroide)' },
+  { path: 'provincia.nombre', label: 'Provincia' },
+  { path: 'departamento.nombre', label: 'Departamento' },
+  { path: 'categoria', label: 'Categoría' },
+]
+const TERRITORIAL_DEFAULT = [
+  'id',
+  'nombre',
+  'provincia.nombre',
+  'departamento.nombre',
+  'centroide.lat',
+  'centroide.lon',
 ]
 
 export const OPERATIONS: BatchOperation[] = [
@@ -99,7 +127,7 @@ export const OPERATIONS: BatchOperation[] = [
         label: 'Provincia',
         required: false,
         allowFixed: true,
-        help: 'Acota la búsqueda. Columna del CSV o un valor fijo (nombre o id).',
+        help: 'Acota la búsqueda. Columna del archivo o un valor fijo (nombre o id).',
       },
       {
         name: 'departamento',
@@ -116,21 +144,8 @@ export const OPERATIONS: BatchOperation[] = [
         help: 'Opcional. Columna o valor fijo.',
       },
     ],
-    outputColumns: DIRECCIONES_COLS,
-    enrich: (e) =>
-      e
-        ? {
-            georef_match: 'si',
-            georef_nomenclatura: (e.nomenclatura as string) ?? '',
-            georef_lat: num(coordOf(e)?.lat),
-            georef_lon: num(coordOf(e)?.lon),
-            georef_provincia: nm(e.provincia),
-            georef_departamento: nm(e.departamento),
-            georef_localidad_censal: nm(e.localidad_censal),
-            georef_calle: nm(e.calle),
-            georef_altura: num(e.altura?.valor),
-          }
-        : empty(DIRECCIONES_COLS),
+    availableFields: DIRECCIONES_FIELDS,
+    defaultFields: DIRECCIONES_DEFAULT,
   },
   {
     key: 'ubicacion',
@@ -156,17 +171,8 @@ export const OPERATIONS: BatchOperation[] = [
         help: 'Columna con la longitud en grados decimales (negativa en Argentina).',
       },
     ],
-    outputColumns: UBICACION_COLS,
-    enrich: (e) =>
-      e
-        ? {
-            georef_match: 'si',
-            georef_provincia: nm(e.provincia),
-            georef_departamento: nm(e.departamento),
-            georef_municipio: nm(e.municipio),
-            georef_gobierno_local: nm(e.gobierno_local),
-          }
-        : empty(UBICACION_COLS),
+    availableFields: UBICACION_FIELDS,
+    defaultFields: UBICACION_DEFAULT,
   },
   {
     key: 'territorial',
@@ -195,18 +201,7 @@ export const OPERATIONS: BatchOperation[] = [
         help: 'Acota por provincia (no aplica a Provincias). Columna o valor fijo.',
       },
     ],
-    outputColumns: TERRITORIAL_COLS,
-    enrich: (e) =>
-      e
-        ? {
-            georef_match: 'si',
-            georef_id: (e.id as string) ?? '',
-            georef_nombre: (e.nombre as string) ?? '',
-            georef_provincia: nm(e.provincia),
-            georef_departamento: nm(e.departamento),
-            georef_lat: num(coordOf(e)?.lat),
-            georef_lon: num(coordOf(e)?.lon),
-          }
-        : empty(TERRITORIAL_COLS),
+    availableFields: TERRITORIAL_FIELDS,
+    defaultFields: TERRITORIAL_DEFAULT,
   },
 ]

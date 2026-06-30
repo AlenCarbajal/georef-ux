@@ -101,6 +101,7 @@ export function BatchGeocoder() {
   const [operationKey, setOperationKey] = useState(OPERATIONS[0].key)
   const [endpoint, setEndpoint] = useState<GeorefResource>('direcciones')
   const [mapping, setMapping] = useState<Mapping>({})
+  const [fields, setFields] = useState<string[]>(OPERATIONS[0].defaultFields)
 
   const operation = OPERATIONS.find((o) => o.key === operationKey)!
   const columns = batch.data?.fields ?? []
@@ -110,11 +111,18 @@ export function BatchGeocoder() {
   useEffect(() => {
     if (operation.endpoints) setEndpoint(operation.endpoints[0].value)
     setMapping(initMapping(operation.fields, columns))
+    setFields(operation.defaultFields)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [operationKey, columns.join('|')])
 
   function setSource(name: string, source: FieldSource) {
     setMapping((m) => ({ ...m, [name]: source }))
+  }
+
+  function toggleField(path: string) {
+    setFields((fs) =>
+      fs.includes(path) ? fs.filter((p) => p !== path) : [...fs, path],
+    )
   }
 
   const requiredMissing = operation.fields.some(
@@ -131,7 +139,7 @@ export function BatchGeocoder() {
   function handleRun(e: React.FormEvent) {
     e.preventDefault()
     if (requiredMissing) return
-    batch.run({ operation, endpoint: effectiveEndpoint, mapping })
+    batch.run({ operation, endpoint: effectiveEndpoint, mapping, fields })
   }
 
   const resultColumns = useMemo(() => {
@@ -231,6 +239,24 @@ export function BatchGeocoder() {
             />
           ))}
 
+          <div className="mapping-title">4 · Campos a incluir en el resultado</div>
+          <p className="field-help">
+            Columnas <code>georef_*</code> que se agregan al archivo (de los que
+            devuelve la API).
+          </p>
+          <div className="output-fields">
+            {operation.availableFields.map((of) => (
+              <label key={of.path} className="output-field">
+                <input
+                  type="checkbox"
+                  checked={fields.includes(of.path)}
+                  onChange={() => toggleField(of.path)}
+                />
+                <span>{of.label}</span>
+              </label>
+            ))}
+          </div>
+
           <button
             type="submit"
             className="btn btn-primary btn-block"
@@ -244,6 +270,14 @@ export function BatchGeocoder() {
             </p>
           )}
         </form>
+      )}
+
+      {running && batch.pyStatus && batch.pyStatus !== 'ready' && (
+        <p className="text-muted batch-pystatus">
+          {batch.pyStatus === 'loading-runtime'
+            ? 'Inicializando el motor Python (Pyodide)… la primera vez puede tardar unos segundos.'
+            : 'Instalando pygeorefar y sus dependencias…'}
+        </p>
       )}
 
       {running && batch.progress && (

@@ -21,7 +21,10 @@ const PY_METHOD: Record<GeorefResource, string> = {
   'fracciones-censales': 'get_fracciones_censales',
   'radios-censales': 'get_radios_censales',
   asentamientos: 'get_asentamientos',
+  aglomerados: 'get_aglomerados',
   calles: 'get_calles',
+  'establecimientos-educativos': 'get_establecimientos_educativos',
+  'instituciones-universitarias': 'get_instituciones_universitarias',
   direcciones: 'get_direcciones',
   ubicacion: 'get_georef_inversa',
 }
@@ -37,7 +40,10 @@ const R_FN: Record<GeorefResource, string> = {
   'fracciones-censales': 'get_fracciones_censales',
   'radios-censales': 'get_radios_censales',
   asentamientos: 'get_asentamientos',
+  aglomerados: 'get_aglomerados',
   calles: 'get_calles',
+  'establecimientos-educativos': 'get_establecimientos_educativos',
+  'instituciones-universitarias': 'get_instituciones_universitarias',
   direcciones: 'normalizar_direccion',
   ubicacion: 'get_ubicacion',
 }
@@ -81,13 +87,17 @@ export function buildSnippets(
     .map(([k, v]) => `'${k}': ${pyValue(k, v)}`)
     .join(', ')
   const py =
-    `# pip install -e pygeorefar\n` +
+    `# pip install git+https://github.com/datosgobar/pygeorefar.git\n` +
     `from src.georef_client import GeorefClient\n\n` +
     `client = GeorefClient()\n` +
     `resultado = client.${PY_METHOD[resource]}(${pyArgs ? `{${pyArgs}}` : ''})`
 
   const rArgs = entries.map(([k, v]) => `${k} = ${rValue(k, v)}`).join(', ')
-  const r = `library(georefar)\n\n` + `resultado <- ${R_FN[resource]}(${rArgs})`
+  const r =
+    `# install.packages('remotes')\n` +
+    `# remotes::install_github('datosgobar/georefar')\n` +
+    `library(georefar)\n\n` +
+    `resultado <- ${R_FN[resource]}(${rArgs})`
 
   return [
     { label: 'cURL', code: curl },

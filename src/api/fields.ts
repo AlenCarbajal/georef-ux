@@ -48,6 +48,18 @@ const localidadCensal: FieldDef = {
   placeholder: 'Nombre o ID',
   help: 'Limita a una localidad censal (unidad definida por el INDEC). Nombre o ID.',
 }
+const gestion: FieldDef = {
+  name: 'gestion',
+  label: 'Gestión',
+  control: 'select',
+  options: [
+    { value: '', label: '(todas)' },
+    { value: 'Estatal', label: 'Estatal' },
+    { value: 'Privado', label: 'Privado' },
+    { value: 'Internacional', label: 'Internacional' },
+  ],
+  help: 'Tipo de gestión. "Internacional" aplica solo a instituciones universitarias.',
+}
 const max: FieldDef = {
   name: 'max',
   label: 'Máx. resultados',
@@ -189,6 +201,25 @@ export const FIELDS_BY_RESOURCE: Record<GeorefResource, ResourceForm> = {
     base: [nombre, provincia, max],
     advanced: [departamento, localidadCensal, ...LIST_ADVANCED],
   },
+  aglomerados: {
+    label: 'Aglomerados',
+    description: 'Aglomerados urbanos (manchas urbanas que agrupan localidades).',
+    base: [nombre, max],
+    advanced: LIST_ADVANCED,
+  },
+  'establecimientos-educativos': {
+    label: 'Establecimientos educativos',
+    description:
+      'Escuelas y establecimientos educativos del país (datos del Ministerio de Educación).',
+    base: [nombre, provincia, max],
+    advanced: [departamento, gestion, ...LIST_ADVANCED],
+  },
+  'instituciones-universitarias': {
+    label: 'Instituciones universitarias',
+    description: 'Sedes de universidades e institutos universitarios.',
+    base: [nombre, provincia, max],
+    advanced: [departamento, gestion, ...LIST_ADVANCED],
+  },
   calles: {
     label: 'Calles',
     description: 'Vías de circulación: calles, avenidas y rutas.',
@@ -277,6 +308,7 @@ export const CATEGORIES: ResourceCategory[] = [
       'gobiernos-locales',
       'localidades',
       'asentamientos',
+      'aglomerados',
     ],
   },
   {
@@ -298,6 +330,14 @@ export const CATEGORIES: ResourceCategory[] = [
       'fracciones-censales',
       'radios-censales',
     ],
+  },
+  {
+    key: 'educacion',
+    label: 'Educación',
+    icon: '◫',
+    description:
+      'Establecimientos educativos y sedes universitarias del país, con su gestión (estatal/privada).',
+    resources: ['establecimientos-educativos', 'instituciones-universitarias'],
   },
   {
     key: 'inversa',
