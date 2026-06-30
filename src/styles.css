@@ -254,6 +254,9 @@ pre,
   grid-area: map;
   display: flex;
   flex-direction: column;
+  /* No estirar al alto de la fila: si no, crece con el panel "builder" al
+     abrir las opciones avanzadas. */
+  align-self: start;
 }
 .panel-results {
   grid-area: results;
@@ -317,6 +320,10 @@ pre,
   font-size: 0.86rem;
   font-weight: 600;
   color: var(--ink);
+  /* Altura fija: el grid solo empareja alturas dentro de la misma fila, así
+     que sin esto una fila con una etiqueta que ocupa 2 líneas (ej. "Calles y
+     direcciones") queda más alta que las demás filas. */
+  min-height: 3.8rem;
   transition:
     border-color 0.12s,
     background 0.12s,
